@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "speedster_py"
+version = "0.1.2"
+description = "Speedster - A 3D point to point parasitic resistance extraction tool for Integrated Circuits"
+authors = ["das-dias <das.dias6@gmail.com>"]
+
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
