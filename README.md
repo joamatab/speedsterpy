@@ -9,3 +9,5 @@ Speedster is a 3D point-to-point parasitic resistance extraction tool for integr
 
 [networkx](https://github.com/networkx/networkx)```: a graph building library supporting the fundamental graph searching and metamorphing algorithms```
 
+```Licensed under BSD-3 Clause```
+
