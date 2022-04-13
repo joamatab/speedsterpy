@@ -23,6 +23,7 @@ Project Workspace (name)/
 |--example_ic.net (mandatory)
 |
 |--example_ic.lef (mandatory)
+/
 ```
 
 ## Important note:
