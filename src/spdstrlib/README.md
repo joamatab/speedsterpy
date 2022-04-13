@@ -12,7 +12,7 @@ The overall file tree for each project library can assimilate to:
 Project Workspace (name)/
 |
 |--testbench/
-|   |--output/
+|   |--output/ (etraction output files)
 |   |
 |   |--cfg.toml (extraction config file)
 |   /
