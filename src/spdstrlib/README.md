@@ -15,6 +15,7 @@ Project Workspace (name)/
 |   |--output/
 |   |
 |   |--cfg.toml (extraction config file)
+|   /
 |
 |--tech.tlef (optional)
 |
