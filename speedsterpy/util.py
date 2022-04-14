@@ -126,6 +126,8 @@ def setupArgParser(
                         action = 'store_true', 
                         help=hel,
                     )
+            # add info option
+            subparser.add_argument("-i", "--info", action="store_true", help="show tool info")
                 
     return parser
 

@@ -2,7 +2,7 @@ import argparse
 from loguru import logger
 import os
 import sys
-import spdstrlib.spdstrlib.spdstrlib as spdstrlib
+from spdstrlib.spdstrlib import run as librun
 import spdstrres.spdstrres.spdstrres as spdstrres
 from util import (
     platformInfo,
@@ -19,7 +19,9 @@ SYSTOKENS = [
 
 SYSARGS = {
     "lib": [
-        ("-n", "name of the library", '<name>', str),
+        ("-c", "create new workspace", '<name>', str),
+        ("-s", "show workspace info", '<name>', str),
+        ("-d", "delete workspace", '<name>', str),
         ("-ws",   "workspace directory", '<dirpath>', str), # to save images and other output files
         ("-tlef", "technology LEF file path", '<filepath>', str),
         ("-gds",  "GDS file path", '<filepath>', str),
@@ -44,7 +46,7 @@ SYSARGS = {
 
 
 SYSFUNCS = {
-    'lib': spdstrlib.run,
+    'lib': librun,
     'rpex': spdstrres.run,
 }
 
