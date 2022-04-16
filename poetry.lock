@@ -161,6 +161,39 @@ checkqa-mypy = ["mypy (==v0.761)"]
 testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xmlschema"]
 
 [[package]]
+name = "spdstrlib"
+version = "0.1.33"
+description = "Speedster project library manager."
+category = "main"
+optional = false
+python-versions = "^3.9"
+develop = false
+
+[package.dependencies]
+loguru = "^0.6.0"
+
+[package.source]
+type = "directory"
+url = "spdstrlib"
+
+[[package]]
+name = "spdstrres"
+version = "0.1.0"
+description = "Speedster point-to-point resistance extraction tool."
+category = "main"
+optional = false
+python-versions = "^3.9"
+develop = false
+
+[package.dependencies]
+loguru = "^0.6.0"
+numpy = "^1.22.3"
+
+[package.source]
+type = "directory"
+url = "spdstrres"
+
+[[package]]
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
@@ -190,7 +223,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "f29be7dee6f51f6152d964629ed6b42e7266f9f799e92da933ca9f1c5d4e1ac5"
+content-hash = "91a9779ed979411b10899728ad9d32d847cbc65976b1caed97b9aa4e4e7d0f57"
 
 [metadata.files]
 atomicwrites = [
@@ -266,6 +299,8 @@ pytest = [
     {file = "pytest-5.4.3-py3-none-any.whl", hash = "sha256:5c0db86b698e8f170ba4582a492248919255fcd4c79b1ee64ace34301fb589a1"},
     {file = "pytest-5.4.3.tar.gz", hash = "sha256:7979331bfcba207414f5e1263b5a0f8f521d0f457318836a7355531ed1a4c7d8"},
 ]
+spdstrlib = []
+spdstrres = []
 toml = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
     {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},

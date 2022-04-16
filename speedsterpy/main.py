@@ -2,8 +2,9 @@ import argparse
 from loguru import logger
 import os
 import sys
-from spdstrlib.spdstrlib import run as librun
-import spdstrres.spdstrres.spdstrres as spdstrres
+from spdstrlib import run as librun
+from spdstrres.spdstrres import run as rpexrun
+
 from util import (
     platformInfo,
     appInfo,
@@ -19,6 +20,7 @@ SYSTOKENS = [
 
 SYSARGS = {
     "lib": [
+        ("-l", "list all available workspaces", "<>", None),
         ("-c", "create new workspace", '<name>', str),
         ("-s", "show workspace info", '<name>', str),
         ("-d", "delete workspace", '<name>', str),
@@ -47,7 +49,7 @@ SYSARGS = {
 
 SYSFUNCS = {
     'lib': librun,
-    'rpex': spdstrres.run,
+    'rpex': rpexrun,
 }
 
 def main():
