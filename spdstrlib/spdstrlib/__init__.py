@@ -22,12 +22,11 @@ from .data import *
 
 
 #create the global workspace lib path save
-
-__workspace_lib_path__ = "{}/wslib".format(getParent(os.getcwd(),1))
+__workspace_lib_path__ = "{}/wslib".format(getParent(os.getcwd(), 0))
+#__workspace_lib_path__ = "{}/wslib".format(getParent(os.getcwd(),1))
 if not os.path.exists(__workspace_lib_path__):
     os.makedirs(__workspace_lib_path__)
 __workspace_filename__ = "wslib.bin"
-
 
 def verboseInfo():
     print("Version      : {} ({})".format(__version__, __date__))
