@@ -8,7 +8,8 @@ class SpdstrWorkspace(object):
         "name", 
         "workspacePath", 
         "techPath", 
-        "layoutPath", 
+        "layoutPath",
+        "gdsTablePath",
         "netlistPath", 
         "portsPath", 
         "testbenchPath", 
@@ -35,6 +36,7 @@ class SpdstrWorkspace(object):
         self.techPath = ""
         self.portsPath = ""
         self.layoutPath = ""
+        self.gdsTablePath = ""
         self.netlistPath = ""
         self.testbenchPath = ""
         self.testbenchOutputPath = ""
@@ -60,6 +62,7 @@ class SpdstrWorkspace(object):
         self.saveWorkspaceDir( selfDict["workspacePath"] )
         self.saveTechFile( selfDict["techPath"] )
         self.saveLayoutFile( selfDict["layoutPath"] )
+        self.saveGdsTableFile( selfDict["gdsTablePath"] )
         self.savePortsFile( selfDict["portsPath"] )
         if "netlistPath" in selfDict.keys() and selfDict["netlistPath"] != "":
             self.saveNetlistFile( selfDict["netlistPath"] )
@@ -74,6 +77,7 @@ class SpdstrWorkspace(object):
         ret += "Parent Directory Path       : {}\n".format(self.workspacePath)
         ret += "Technology File Path        : {}\n".format(self.techPath)
         ret += "Layout File Path            : {}\n".format(self.layoutPath)
+        ret += "GDS Table File Path         : {}\n".format(self.gdsTablePath)
         ret += "Circuit Netlist File Path   : {}\n".format(self.netlistPath)
         ret += "Ports File Path             : {}\n".format(self.portsPath)
         ret += "Testbench Folder Path       : {}\n".format(self.testbenchPath)
@@ -96,6 +100,7 @@ class SpdstrWorkspace(object):
             "workspacePath": self.workspacePath,
             "techPath": self.techPath,
             "layoutPath": self.layoutPath,
+            "gdsTablePath": self.gdsTablePath,
             "netlistPath": self.netlistPath,
             "portsPath": self.portsPath,
             "testbenchPath": self.testbenchPath,
@@ -132,6 +137,16 @@ class SpdstrWorkspace(object):
         if extension != ".gds": #or extension != ".oasis": NOT IMPLEMENTED YET!
             raise ValueError("The {} file's extension must be .gds".format(filename))
         self.layoutPath = path
+    
+    def saveGdsTableFile(self, gdsTablePath):
+        path = os.path.abspath(gdsTablePath)
+        _, tail = os.path.split(path)
+        filename, extension = os.path.splitext(tail)
+        if not os.path.isfile(path):
+            raise ValueError("The {} file does not exist".format(tail))
+        if extension != ".csv":
+            raise ValueError("The {} file's extension must be .csv".format(filename))
+        self.gdsTablePath = path
     
     def saveNetlistFile(self, netlistPath):
         path = os.path.abspath(netlistPath)
