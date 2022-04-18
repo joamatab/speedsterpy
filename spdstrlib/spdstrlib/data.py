@@ -62,8 +62,9 @@ class SpdstrWorkspace(object):
         self.saveWorkspaceDir( selfDict["workspacePath"] )
         self.saveTechFile( selfDict["techPath"] )
         self.saveLayoutFile( selfDict["layoutPath"] )
-        self.saveGdsTableFile( selfDict["gdsTablePath"] )
         self.savePortsFile( selfDict["portsPath"] )
+        if "gdsTablePath" in selfDict.keys() and selfDict["gdsTablePath"] != "":
+            self.saveGdsTableFile( selfDict["gdsTablePath"] )
         if "netlistPath" in selfDict.keys() and selfDict["netlistPath"] != "":
             self.saveNetlistFile( selfDict["netlistPath"] )
         if "testbenchPath" in selfDict.keys() and selfDict["testbenchPath"] != "":

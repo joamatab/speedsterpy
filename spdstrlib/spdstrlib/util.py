@@ -48,7 +48,7 @@ def handleMutuallyExclusive(argv: Namespace) -> list:
     """
     ret = []
     if (argv.s or argv.d or argv.l) and \
-        ( argv.c or argv.tlef or argv.lef or argv.gds or argv.tb or argv.o or argv.net):
+        ( argv.c or argv.tab or argv.tlef or argv.lef or argv.gds or argv.tb or argv.o or argv.net):
         raise ValueError("Show, List and Delete operations are mutually exclusive with other operations")
     if argv.c:
         ret.append(SelectedOp.CREATE)
@@ -90,12 +90,16 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     netlistFilePath = None
     testbenchDir    = None
     outputDir       = None
+    tableFilePath   = None
     if argv.net:
         netlistFilePath = argv.nl[0]
     if argv.tb:
         testbenchDir = argv.tb[0]
     if argv.o:
         outputDir = argv.o[0]
+    if argv.tab:
+        tableFilePath = argv.tab[0]
+        
     # after collecting all the values, create the workspace
     args = {
         "name"                  : workspaceName,
@@ -118,7 +122,10 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
         newWorkspace.saveTestbenchOutput(outputDir)
     else: # if no output directory was provided,
         newWorkspace.createTestbenchOutputDir() # create a default testbench output directory
-        
+    
+    if tableFilePath:
+        newWorkspace.saveGdsTableFile(tableFilePath)
+    
     # write new workspace to memory
     write(newWorkspace)
     # save new workspace to library

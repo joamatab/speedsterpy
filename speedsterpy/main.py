@@ -27,6 +27,7 @@ SYSARGS = {
         ("-ws",   "workspace directory", '<dirpath>', str), # to save images and other output files
         ("-tlef", "technology LEF file path", '<filepath>', str),
         ("-gds",  "GDS file path", '<filepath>', str),
+        ("-tab",  "gds table file path", '<filepath>', str),
         ("-lef",  "LEF file path with pad and port locations", '<filepath>', str),
         ("-net",  "circuit (SPICE) netlists file path to extract netlist info", '<filepath>', str),
         ("-tb",   "testbench directory path", '<dirpath>', str),
