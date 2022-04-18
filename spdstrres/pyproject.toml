@@ -5,10 +5,12 @@ description = "Speedster point-to-point resistance extraction tool."
 authors = ["dasdias <das.dias6@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-loguru = "^0.6.0"
-numpy = "^1.22.3"
-
+# global
+python = "^3.9" 
+loguru = "^0.6.0" # console logger for textual console reports
+numpy = "^1.22.3" # matrix and vector core operations
+networkx = "^2.7.1" # graph library for python
+gdspy = "^1.6.11" # gdsii ic layout information visualization and parsing" 
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

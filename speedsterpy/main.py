@@ -3,7 +3,7 @@ from loguru import logger
 import os
 import sys
 from spdstrlib import run as librun
-from spdstrres.spdstrres import run as rpexrun
+from spdstrres import run as rpexrun
 
 from util import (
     platformInfo,
@@ -33,16 +33,14 @@ SYSARGS = {
         ("-o",    "library extraction output directory", '<dirpath>', str),
     ],
     
-    "rpex": [   
-        ("-ptp", "perform point-to-point resistance extraction, producing a .spr file", '<>', None),
-        ("-v",   "visualize the extracted point to point resistance", '<>', None),
-        ("-l",   "project library name to run the extraction on", '<filepath>', str),
-        ("-b",   "produce a .toml file with the consumed time and memory computing resources benchmarks of the extraction", '<filepath>', str),
-        ("-spdr",   "produce a \".spdr.yaml\" file with the extracted resistances", '<filepath>', str),
+    "rpex": [
+        ("-ptp",    "perform point-to-point resistance extraction, producing a .spr file", '<>', None),
+        ("-v",      "visualize the extracted point to point resistance", '<>', None),
+        ("-ws",     "project workspace name to run the extraction on", '<filepath>', str),
+        ("-b",      "produce a .toml file with the consumed time and memory computing resources benchmarks of the extraction", '<>', None),
         ("-spef",   "produce a .spef file with a given spefFileName", '<filepath>', str),
         ("-net",    "generate a netlist file with a given netName from extracted data", '<filepath>', str),
-        ("-gn-json","produces a .json file with the extracted graph network to extract parasitic resistance", '<>', None),
-        ("-gn-yaml","produces a .yaml file with the extracted graph network to extract parasitic resistance", '<>', None),
+        ("-o",      "produces .yaml files with the resulting structures from parasitic extraction", '<>', None),
     ],
 }
 

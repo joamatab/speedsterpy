@@ -20,7 +20,6 @@ from .write import(
 from .util import *
 from .data import *
 
-
 #create the global workspace lib path save
 __workspace_lib_path__ = "{}/wslib".format(getParent(os.getcwd(), 0))
 #__workspace_lib_path__ = "{}/wslib".format(getParent(os.getcwd(),1))
@@ -64,7 +63,7 @@ def run(subparser, *args, **kwargs) -> None:
             fileName= __workspace_filename__
         )
         # dump the library on the standard path
-        dump(lib)    
+        dump(lib)
     
     #handle mutually exclusive arguments
     try:
