@@ -9,7 +9,6 @@ from spdstrlib import (
     SpdstrWorkspaceLib,
     SpdstrWorkspace,
 )
-
 def handleMutuallyExclusive(argv: Namespace) -> None:
     """_summary_
     handler for the mutually exclusive options

@@ -10,13 +10,14 @@ the user with the resistance extraction engine
 """
 
 from loguru import logger
-from data import (
+import sys
+sys.path.append("../spdstrutil")
+from spdstrutil import (
     Unimplemented,
 )
 from spdstrlib import (
     SpdstrWorkspace,
 )
-
 def runResPex(
     workspace: SpdstrWorkspace,
     ptp = False,
