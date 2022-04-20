@@ -15,3 +15,9 @@ heatmap with the user of the main application - speedster
 # selectable metal layers of the layout
 # as well as the resitance heatmap generated from
 # the point to point resistance extraction
+
+# TODO : URGENTLY - TO ENABLE VISUAL TESTING OF SPDSTRRES MODULE
+# white background
+# original colour schemes for the layers / datatypes
+# support to backannotation of resistance and ports must be added
+# as features to the new viewer...

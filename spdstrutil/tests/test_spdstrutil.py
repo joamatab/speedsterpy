@@ -6,7 +6,9 @@ from spdstrutil import (
     GdsTable,
     readGdsTable,
     writeGdsTable,
-    getFromPurpose,
+    getGdsTableEntriesFromPurpose,
+    getGdsTableEntriesFromLayerName,
+    getGdsLayerDatatypeFromLayerNamePurpose,
 )
 
 def test_version():
@@ -29,16 +31,37 @@ def test_gds_table_write():
         description = "Metal 4"
     )
     writeGdsTable(gdsTab, path)
+    assert True
     #print(str(gdsTab))
 
 def test_gds_table_read_yaml():
     path = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrutil/resources/gds_table.yaml"
     gdsTab = readGdsTable(path)
     #print(str(gdsTab))
+    assert True
 
 def test_filter_gds_table_by_purpose():
     path = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/resources/sky130/skywater-pdk-libs-sky130_fd_pr/skywater130/gds_layers.csv"
     gdsTab = readGdsTable(path)
-    print(str(gdsTab))
-    newtab = getFromPurpose(gdsTab, GdsLayerPurpose.DRAWING)
+    #print(str(gdsTab))
+    newtab = getGdsTableEntriesFromPurpose(gdsTab, GdsLayerPurpose.DRAWING)
     print(str(newtab))
+    assert True
+
+def test_filter_gds_table_by_layer_name():
+    path = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/resources/sky130/skywater-pdk-libs-sky130_fd_pr/skywater130/gds_layers.csv"
+    gdsTab = readGdsTable(path)
+    #print(str(gdsTab))
+    newtab = getGdsTableEntriesFromLayerName(gdsTab, "met4")
+    print(str(newtab))
+    assert True
+
+def test_get_gds_layer_datatype_from_layer_name_purpose():
+    path = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/resources/sky130/skywater-pdk-libs-sky130_fd_pr/skywater130/gds_layers.csv"
+    gdsTab = readGdsTable(path)
+    #print(str(gdsTab))
+    datatype = getGdsLayerDatatypeFromLayerNamePurpose(gdsTab, "met4", GdsLayerPurpose.PIN)
+    print(datatype)
+    assert True
+    
+    

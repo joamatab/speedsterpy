@@ -12,11 +12,7 @@ import numpy as np
 import sys
 sys.path.append("../spdstrutil")
 from spdstrutil import Unimplemented
-from gdspy import (
-    Path,
-    Polygon,
-)
-class SpeedsterPointType(Enum):
+class SpeedsterPortType(Enum):
     """_summary_
     SpeedsterPointType enum
     Args:
@@ -28,7 +24,7 @@ class SpeedsterPointType(Enum):
     None
     INPUT = 1
     OUTPUT = 2
-    IO = 3
+    INOUT = 3
     
 
 # TODO : Develop a SpeedsterPoint class
@@ -36,339 +32,169 @@ class SpeedsterPointType(Enum):
 # telling the tool if it is an output or input of current
 # the resistance of the point, and if it is a 
 # corner/interconnection or an end point of the path.
-class Point(object):
+
+
+# TODO : Develop a SpeedsterPort class
+class SpeedsterPort(object):
     __slots__ = [
-        'x',
-        'y',
-        'ioType',
-        'resistance',
+        "name",
+        "ioType",
+        "layer",
+        "datatype",
+        "resistance",
+        "location",
+        "width",
     ]
     def __init__(
         self, 
-        x:float = 0.0, 
-        y:float = 0.0, 
-        ioType: SpeedsterPointType = None, 
-        resistance = None,
+        name: str = "new_port",
+        ioType: SpeedsterPortType = None,
+        resistance: float = 0.0,
+        location: list = [0,0],
+        width: float = 1.0,
+        layer: str = "met1",
+        dataType: str = "pin",
     ):
-        self.x = x
-        self.y = y
+        self.name = name
         self.ioType = ioType
+        self.layer = layer
+        self.datatype = dataType
         self.resistance = resistance
-    
-    def __str__(self):
-        ret  = "{} {} ".format(self.x, self.y)
-        ret += "Type: {} ".format(self.ioType.name)
-        ret += "R[ohm]: {} ".format(self.resistance)
-        return ret
-    
-    def __dict__(self):
-        """_summary_
-        Returns a dictionary representation of the point
-        """
-        return {
-            'x': self.x,
-            'y': self.y,
-            'ioType': self.ioType.name,
-            'resistance': self.resistance,
-        }
+        self.location = location
+        self.width = width
+        self.x = location[0]
+        self.y = location[1]
         
+    def __str__(self):
+        return "Port: {} Type: {} Location: {} in {} Resistance: {}".format(
+            self.name,
+            self.ioType.name,
+            self.location,
+            self.layer,
+            self.resistance,
+        )
+    def __dict__(self) -> dict:
+        return {
+            "name": self.name,
+            "ioType": self.ioType.name,
+            "resistance": self.resistance,
+            "location": self.location,
+            "width": self.width,
+            "layer": self.layer,
+            "datatype": self.datatype,
+        }
     def parseData(self, yamlDict: dict):
         """_summary_
-        Parses the data of a point
+        Parses the data of a port
         Args:
-            data (dict): a dictionary containing the data
+            yamlDict (dict): a dictionary containing the port data, resulting from a yaml file
+            
         """
-        self.x = yamlDict['x']
-        self.y = yamlDict['y']
-        self.ioType = SpeedsterPointType[yamlDict['ioType']]
+        if not "name" in yamlDict.keys():
+            raise KeyError("Port must have a name")
+        self.name = yamlDict['name']
+        if not "ioType" in yamlDict.keys():
+            raise KeyError("Port must have an I/O Type")
+        self.ioType = SpeedsterPortType[yamlDict['ioType']]
+        if not "resistance" in yamlDict.keys():
+            raise KeyError("Port must have a resistance")
         self.resistance = yamlDict['resistance']
-
-    def setResistance(self, resistance = 0.0):
-        """_summary_
-        Sets the resistance of the point
-        """
-        if type(resistance) is not float:
-            raise TypeError("Resistance must be a float")
-        self.resistance = resistance
-
-    def setIO(self, ioType: SpeedsterPointType = None):
-        """_summary_
-        Sets the type of the point
-        """
-        self.ioType = ioType
+        if not "location" in yamlDict.keys():
+            raise KeyError("Port must have a location")
+        self.location = yamlDict['location']
+        if not "width" in yamlDict.keys():
+            raise KeyError("Port must have a width")
+        self.width = yamlDict['width']
+        if not "layer" in yamlDict.keys():
+            raise KeyError("Port must have a layer")
+        self.layer = yamlDict['layer']
+        if not "datatype" in yamlDict.keys():
+            raise KeyError("Port must have a datatype")
+        self.datatype = yamlDict['datatype']
+        self.x = self.location[0]
+        self.y = self.location[1]
+    
+    def get_polygon(self):
+        #
+        return [
+            [self.x - self.width/2, self.y - self.width/2],
+            [self.x + self.width/2, self.y - self.width/2],
+            [self.x - self.width/2, self.y + self.width/2],
+            [self.x + self.width/2, self.y + self.width/2],
+        ]
         
-    def isInput(self) -> bool:
-        """_summary_
-        Returns if the point is an input point
-        """
-        return self.ioType == SpeedsterPointType.INPUT \
-            or self.ioType == SpeedsterPointType.IO
-    
-    def isOutput(self) -> bool:
-        """_summary_
-        Returns if the point is an output point
-        """
-        return self.ioType == SpeedsterPointType.OUTPUT \
-            or self.ioType == SpeedsterPointType.IO
-    
-    def __add__(self, other):
-        """_summary_
-        Adds two points
-        """
-        if type(other) is not Point:
-            raise TypeError("other must be a Point")
-        return Point(self.x + other.x, self.y + other.y)
-    
-    def __sub__(self, other):
-        """_summary_
-        Subtracts two points
-        """
-        if type(other) is not Point:
-            raise TypeError("other must be a Point")
-        return Point(self.x - other.x, self.y - other.y)
-
-    def __mul__(self, scalar = 1.0):
-        """_summary_
-        Multiplies two points
-        """
-        if type(scalar) is not float:
-            raise TypeError("scalar must be a float")
-        return Point(self.x * scalar, self.y * scalar)
-
-    def __eq__(self, other: object) -> bool:
-        """_summary_
-        Returns if two Speedster Paths are equal
-        Args:
-            other (object): a generic Python object
-        """
-        if type(other) is not Point:
-            raise TypeError("other must be a Point")
-        return self.x == other.x and self.y == other.y
-
-    def __ne__(self, other: object) -> bool:
-        """_summary_
-        Returns if two Speedster Paths are not equal
-        Args:
-            other (object): a generic Python object
-        """
-        return not self.__eq__(other)
-class SpeedsterPath(object):
-    """_summary_
-    Speedster's core geometric data structure
-    to save the central path representation of any
-    generic GDS polygon 
-    Args:
-        object (_type_): _description_
-    """
-    __slots__ = [
-        "points",
-        "widths",
-        "fixMap"
-    ]
-    def __init__(self, points = [], widths = [], fixMap = []):
-        """_summary_
-
-        Args:
-            points (list, optional): list of points of the central path points. Defaults to [].
-            widths (list, optional): list of widths for each central path point. Defaults to [].
-            fixMap (list, optional): boolean map indicating if a point is 
-                                        at a corner, intersection, or end node (or not). Defaults to [].
-        Raises:
-            TypeError: _description_
-            TypeError: _description_
-        """
-        if points != []:
-            if type(points[0]) != list :
-                raise TypeError("A list of [x coord, y coord] must be parsed in points")
-        if widths != []:
-            if type(widths[0]) != float:
-                raise TypeError("The parsed widths must be a list of floating point numbers")   
-        self.points = np.array( [ np.array(p) for p in points ] )    
-        self.widths = np.array( widths )
-        self.fixMap = np.array( fixMap )
-    
-    def __repr__(self):
-        return self.__str__()
-    
-    def __str__(self) -> str:
-        return str(self.__dict__())
-    
-    def __getitem__(self, index: int) -> list:
-        """_summary_
-        Returns a point of the Speedster Path geometry data structure
-        Args:
-            index (int): index of the point to be returned
-        """
-        return self.points[index]
+class SpeedsterPortLibrary(object):
+    def __init__(self):
+        self.ports = {}
+    def __str__(self):
+        ret = "-----------------\n"
+        ret += "Port Library\n"
+        for value in self.ports.values():
+            ret += "-----------------\n"
+            ret += "{}\n".format(value)
+        ret += "-----------------\n"
+        return ret
     
     def __iter__(self):
-        """_summary_
-        Returns an iterator for the points of the
-        Speedster Path geometry data structure
-        """
-        return self.points.__iter__()
+        return iter(self.ports.values())
     
-    def __eq__(self, other: object) -> bool:
+    def add(self, port: SpeedsterPort) -> SpeedsterPortLibrary:
         """_summary_
-        Returns if two Speedster Paths are equal
+        Adds a port to the library
         Args:
-            other (object): a generic Python object
+            port (SpeedsterPort): the port to be added
+        Returns:
+            SpeedsterPortLibrary: the library with the new port
         """
-        if not isinstance(other, SpeedsterPath):
-            return False
-        if not np.array_equal(self.points, other.points):
-            return False
-        if not np.array_equal(self.widths, other.widths):
-            return False
-        if not np.array_equal(self.fixMap, other.conerMap):
-            return False
-        return True
-    
-    def __ne__(self, other: object) -> bool:
+        if port.name in self.ports.keys():
+            raise KeyError("Port {} already exists".format(port.name))
+        self.ports[port.name] = port
+        return self
+        
+    def remove(self, portName) -> SpeedsterPortLibrary:
         """_summary_
-        Returns if the Speedster Path geometry data structure is not equal to another
+        Remnoves a port from the library
         Args:
-            other (object): _description_
+            portName (_type_): _description_
+        Returns:
+            SpeedsterPortLibrary: the library without the port
+        Raises:
+            KeyError: _description_
         """
-        return not self.__eq__(other)
-    
+        if portName not in self.ports.keys():
+            raise KeyError("Port {} does not exist".format(portName))
+        del self.ports[portName]
+        return self
+
     def __dict__(self) -> dict:
         """_summary_
-        Return a dict representation of the Speedster Path
-        geometry data structure.
-        """
-        newDict = {"path":{"points":[], "widths":[], "corner": []}}
-        newDict["path"]["points"] = [ list(p) for p in self.points ]
-        newDict["path"]["widths"] = list(self.widths)
-        newDict["path"]["corner"] = list(self.fixMap)
-        return newDict
-    
-    def parseData(self, yamlDict: dict) -> None:
-        """_summary_
-        Auto-generate the Speedster Path geometry data structure
-        from a given yaml recovered dict
-        Args:
-            yamlDict (dict): a dictionary containing the Speedster Path
-                             geometry data structure
-        """
-        if not "path" in yamlDict:
-            raise TypeError("The parsed yamlDict must contain the \"path\" key")
-        if not "points" in yamlDict["path"]:
-            raise TypeError("The parsed yaml dict must contain a 'path' with 'points'")
-        self.points = np.array( [ np.array(p) for p in yamlDict["path"]["points"] ] )
-        if not "widths" in yamlDict["path"]:
-            raise TypeError("The parsed yaml dict must contain a 'path' with 'widths'")
-        self.widths = np.array( yamlDict["path"]["widths"] )
-        if not "corner" in yamlDict["path"]:
-            raise TypeError("The parsed yaml dict must contain a 'path' with 'corner'")
-        self.fixMap = np.array( yamlDict["path"]["corner"] )
-        
-    def add(self, point:list, width:float) -> None:
-        """_summary_
-        Add a point to the Speedster Path geometry data structure
-        Args:
-            point (list): _description_
-            width (float): _description_
-        """
-        np.append(self.points, [point], axis=0)
-        np.append(self.widths, width)
-    
-    def offset(self, dx = 0.0, dy = 0.0) -> None:
-        """_summary_
-        Offsets the Speedster Path geometry data structure
-        Args:
-            dx (float, optional): x axis offset. Defaults to 0.0.
-            dy (float, optional): y axis offset. Defaults to 0.0.
-        """
-        self.points += np.array([dx, dy])
-    
-    def boundingBox(self) -> list:
-        """_summary_
-        Returns the bounding box of the Speedster Path geometry data structure
+        Returns a dictionary with the ports
         Returns:
-            list: [ [xmin, ymin], [xmax, ymax]]
+            dict: _description_
         """
-        return [
-            [
-                np.min(self.points[:,0]),
-                np.min(self.points[:,1])
-            ],
-            [
-                np.max(self.points[:,0]),
-                np.max(self.points[:,1])
-            ]
-        ]
-    
-    def isFixed(self, point:list) -> bool:
-        """_summary_
-        Returns if a point is a corner/intersection or not
-        Args:
-            point (list): _description_
-        """
-        return self.fixMap[self.points == np.array(point)]
-    
-    
-    def reduceResolution(self, factor: int = 1) -> None:
-        """_summary_
-        Reduces the resolution of the points
-        belonging to the Speedster Path data structure
-        Args:
-            factor (int) : the number of points successive points
-                            to remove during the reduction
-        """
-        cnt = 0
-        keep = np.ones(len(self.points), dtype=bool)
-        for i in range(len(self.points)):
-            if cnt != factor:
-                cnt += 1
-            else:
-                cnt = 0
-                if not self.isFixed(self.points[i]):
-                    # if points is not a corner, don't keep it
-                    keep[i] = False
-                # if point is a corner, we must keep it!
-        # keep only the points that are corners and 
-        # the points that are left behind after the reduction
-        self.points = self.points[keep]
-        self.widths = self.widths[keep]
-        self.fixMap = self.fixMap[keep]
-    
-    def fromPath(self, path: Path) :
-        """_summary_
-        Constructs a Speedster Path from a gdspy Path
-        Args:
-            path (gdspy.Path): gdsii Path object
-        """
-        self.points = np.array( [ Point(p[0], p[1]) for p in path.points ] )
-        self.widths = np.array( path.width )
-        self.fixMap = np.zeros( len(self.points), dtype=bool )
-        # signal the first and last points (end nodes) as irremovable
-        self.fixMap[0] = True
-        self.fixMap[-1] = True
-    
-    def fromPolygon(self, poly: Polygon) -> Unimplemented:
-        """_summary_
-        Constructs a Speedster Path from a gdspy Polygon
-        Args:
-            poly (gdspy.Polygon): gdsii Polygon object
-        """
-        # requires the use of core image processing algorithms
-        return Unimplemented("SpeedsterPath.from_polygon : Not implemented yet.") 
+        ret = {}
+        for key, value in self.ports.items():
+            ret[key] = value.__dict__()
+        return ret
 
-
-#TODO : Develop a SpeedsterCell to save the
-# Speedster representation of the layout geometries
-class SpeedsterCell(object):
-    def __init__(self) -> Unimplemented:
+    def parseData(self, yamlDict: dict):
         """_summary_
-        Constructs a Speedster Cell
+        Parses the data of a port
+        Args:
+            yamlDict (dict): a dictionary containing the port data, resulting from a yaml file
+            
         """
-        return Unimplemented("SpeedsterCell: Not implemented yet.")
+        for portName, port in yamlDict.items():
+            newPort = SpeedsterPort()
+            newPort.parseData(port)
+            self.add(newPort)
+    
     
 class SpeedsterResMap(object):
     """_summary_
     Standard resistance map data structure
-    for the Speedster tool
+    for the Speedster tool, to map resistance values
+    to each fragment of a PolygonSet
     """
     __slots__ = [
         "r"
@@ -438,17 +264,23 @@ class SpeedsterResMap(object):
             raise TypeError("The parsed yamlDict must contain the \"r\" key")
         self.r = np.array( yamlDict["r"] )
 
-# TODO : Develop a SpeedsterIntraLayerChargeMobilityGraph
-# to save the generated graphs for each polygon of 
-# a metal layer of the integrated circuit
+# TODO : Develop a SpeedsterLayoutResistanceMap to save the
+# resistance map of a GdsCell representing a net
+
+# TODO : Develop a SpeedsterConnectionGraph to save
+# connections between polygons of the same and of different layers
+# treating polygons and vias as nodes and the connections as edges
+
+# TODO : Develop a SpeedsterChargeMobilityGraph
+# to save the generated graphs for current path in the layout
+
+
+
 
 # TODO : Develop a SpeedsterInterLayerChargeMobilityGraph
 # to save the generated graphs for the mobility 
 # of charge between successive metal layers of the
 # integrated circuit
-
-
-        
         
 # TODO : develop an extraction engine, that 
 # controls the extraction flux
