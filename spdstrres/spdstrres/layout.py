@@ -28,7 +28,7 @@ from .data import(
     SpeedsterPort,
 )
 from spdstrutil import (
-    GdsLibrary,
+    GdsTable,
     GdsLayerPurpose,
     getGdsLayerDatatypeFromLayerNamePurpose,
 )
@@ -113,9 +113,10 @@ def _bool_polygon_overlap_check(
                 True: They overlap; False: They don't overlap
     """
     return not ( _check_polygon_overlap(polygonA, polygonB) is None )
-
 # ? Testing wrapper for the private function _check_neighbour_direction
 wrapper_bool_polygon_overlap_check = _bool_polygon_overlap_check
+
+
 
 def _check_same_polygon(
     polyA,
@@ -217,7 +218,8 @@ def _saturate_vector(
     vx = 1 if vec[0] >= 0.5 else (-1 if vec[0] < -0.5 else 0)
     vy = 1 if vec[1] >= 0.5 else (-1 if vec[1] < -0.5 else 0)
     return [vx, vy]
-
+# ? Testing wrapper for the private function _saturate_vector
+wrapper_saturate_vector = _saturate_vector
 
 def _check_neighbour_direction(
     poly: np.array,
@@ -265,6 +267,8 @@ def _check_neighbour_direction(
         return PolygonDirection.SOUTH_WEST
     else: 
         return None
+# ? Testing wrapper for the private function _check_neighbour_direction
+wrapper_check_neighbour_direction = _check_neighbour_direction
 
 def _get_direction_between_rects(
     poly: np.array,
@@ -352,8 +356,23 @@ def fragment_net(
         net.add(references)
     return net
 
+def _get_polygons_by_spec(
+    cell: GdsCell,
+    layer,
+    datatype,
+) -> list:
+    polys = []
+    for poly, path, _, _ in cell:
+        if poly.layers[0] == layer and poly.datatypes[0] == datatype:
+            polys.append(poly)
+        if path.layers[0] == layer and path.datatypes[0] == datatype:
+            polys.append(path)
+    return polys
+
 def _extract_nets_through_intersect(
     layout: GdsCell,
+    nets: GdsLibrary,
+    gdsTable: GdsTable,
 ) -> GdsLibrary:
     """_summary_
     Extracts a metal net from a GdsCell object by performing
@@ -363,18 +382,73 @@ def _extract_nets_through_intersect(
         layout (GdsCell) : GdsCell object containing the layout
     Returns:
         GdsLibrary : GdsLibrary object containing the extracted nets
-    """
-     #second way: use polygon interception
-    # for each cell of the layout
-        # for each polygon of the cell
-            # for each polygon of the cell, that is not equal to the current one
-                # if the two polygons intersect,
-                    # if one of the polygons is 
-                    # create a new cell
-                    # add them to the new cell
-    logger.info("Extracting metal nets through geometry processing...")
+    General Algorithm:
     
-    logger.info("Net extraction is complete. Net renaming is advised!")
+    # following the order of highest metal layer to lowest metal layer
+    # first layer:
+    # if the metal alyer is a routing metal layer
+        # 1 attribute a net label to the polygon;
+        # 2 for each polygon of the same layer, check which polygons intersect
+        # 3 if the polygon intersects with another polygon, they must have the same net label
+        # 4 if the polygon does not intersect with another polygon, it must be have a different label
+    
+    # vias layer, and not a routing metal layer
+        # 1 for each via, check the polygon that intersects it in the metal layer above
+        # 2 the via will hold the net label of the polygon that intersects it
+    # routing metal layers:
+        # 1 for each polygon, check which via intersect it in the metal layer above, and give the same net label
+        # 2 if the polygon does not intersect with a via, give a different label
+    
+    # for all non-via metal layers:
+        # 1 for each polygon, check if it intersects with a via
+        # 2 if it does, go on
+        # 3 if it does not, check if it intersects with another polygon of the same layer
+        # 4 if it does, attribute the same net label to both
+    """
+    logger.info("Extracting metal nets through geometry processing...")
+    labelId = 0
+    net = "net"
+    
+    labelNames = []
+    labels = [] # recognized labels
+    cell = layout.copy()
+    # get the ordered metal layers and 
+    # construct the "name" : (layer, datatype) map
+    # from mcon, until the last metal layer
+    via = "via"
+    met = "met"
+    maxMetalNum = 15
+    layerMap = {}
+    layerMap["mcon"] = getGdsLayerDatatypeFromLayerNamePurpose("mcon", GdsLayerPurpose.DRAWING)
+    layerMap["via"] = getGdsLayerDatatypeFromLayerNamePurpose("via", GdsLayerPurpose.DRAWING)
+    layerMap["met1"] = getGdsLayerDatatypeFromLayerNamePurpose("met1", GdsLayerPurpose.DRAWING)
+    for i in range(2,maxMetalNum):#maximum number of metal layers 
+        aux = getGdsLayerDatatypeFromLayerNamePurpose("{}{}".format(via,str(i)), GdsLayerPurpose.DRAWING).__dict__()
+        if aux != None:
+            layerMap["{}{}".format(via,str(i))] = aux
+            lastVia = i
+        aux = getGdsLayerDatatypeFromLayerNamePurpose("{}{}".format(met,str(i)), GdsLayerPurpose.DRAWING).__dict__()
+        if aux != None:
+            layerMap["{}{}".format(met,str(i))] = aux
+            lastMetal = i
+        else: # if the routing metal layer is not found, stop
+            break
+    
+    # start from the last metal layer and go down
+    layer,datatype = layerMap.values()[-1]
+    activeLabel = "{}{}".format(net,str(labelId))
+    for polyA in _get_polygons_by_spec(cell, layer, datatype):
+        for polyB in _get_polygons_by_spec(cell, layer, datatype):
+            if not(_check_same_polygon(polyA, polyB)): # if they are not the same polygon
+                # if they overlap
+                if _bool_polygon_overlap_check(polyA, polyB):
+                    # they must have the same label
+                    pass
+        
+        
+    
+    logger.info("Net extraction is complete. Nets found :{}".format(len(labels)))
+    logger.warning("Net renaming is advised!")
     pass
 
 def extract_nets(
@@ -449,7 +523,7 @@ def select_abstraction_depth(
 def add_port(
     port : SpeedsterPort,
     layout: GdsCell,
-    lib: GdsLibrary,
+    table: GdsTable,
 ) -> None:
     """_summary_
     Adds/Draws a port to the a layout cell
@@ -458,6 +532,6 @@ def add_port(
         layout  (GdsCell)       : a gdspy GdsCell object containing the layout
                                     to which the port will be added
     """
-    layer, datatype = getGdsLayerDatatypeFromLayerNamePurpose(lib, port.layer, GdsLayerPurpose(port.purpose))
+    layer, datatype = getGdsLayerDatatypeFromLayerNamePurpose(table, port.layer, GdsLayerPurpose(port.purpose))
     portPoly = Polygon(port.get_polygon(), layer, datatype)
     layout.add(portPoly)
