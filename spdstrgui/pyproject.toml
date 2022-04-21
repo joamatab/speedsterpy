@@ -1,11 +1,14 @@
 [tool.poetry]
-name = "spdstr-cap"
+name = "spdstrgui"
 version = "0.1.0"
 description = ""
 authors = ["dasdias <das.dias6@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+gdspy = "^1.6.11"
+matplotlib = "^3.5.1"
+numpy = "^1.22.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

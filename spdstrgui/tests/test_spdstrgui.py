@@ -1,4 +1,4 @@
-from spdstr_cap import __version__
+from spdstrgui import __version__
 
 
 def test_version():
