@@ -51,6 +51,7 @@ class GdsLayerPurpose(Enum):
     MASK_ADD    = "mask add"
     MASK_DROP   = "mask drop"
     WAFFLE_DROP = "waffle drop"
+    BACKANNOTATION = "backannotation"
     
 class GdsTable(dict):
     """_summary_

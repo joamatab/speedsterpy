@@ -13,3 +13,7 @@ from test_spdstrutil import *
 test_filter_gds_table_by_layer_name()
 
 test_get_gds_layer_datatype_from_layer_name_purpose()
+
+test_get_metal_drawing_layers()
+
+test_add_backannotation()

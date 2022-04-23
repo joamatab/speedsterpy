@@ -9,7 +9,7 @@ import sys
 from loguru import logger
 import argparse
 
-from .data import(
+from ...spdstrnet.spdstrnet.data import(
     SpeedsterPath,
 )
 from .read import *

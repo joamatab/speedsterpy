@@ -1,5 +1,5 @@
 """_summary_
-layout.py contains the main algorithms
+geometry.py contains the main algorithms
 for the preprocessing of layout geometry
 in order to enable point to point resistance extraction
 
@@ -12,7 +12,7 @@ from enum import Enum
 import numpy as np
 from gdspy import(
     GdsLibrary,
-    GdsCell,
+    Cell,
     PolygonSet,
     Polygon,
     Rectangle,
@@ -31,6 +31,7 @@ from spdstrutil import (
     GdsTable,
     GdsLayerPurpose,
     getGdsLayerDatatypeFromLayerNamePurpose,
+    getDrawingMetalLayersMap,
 )
 
 def check_point_inside_polygon(
@@ -73,7 +74,7 @@ class PolygonDirection(Enum):
     NORTH_WEST  = 8
 
 
-def _check_polygon_overlap(
+def check_polygon_overlap(
     polygonA: PolygonSet,
     polygonB: PolygonSet,
     layer: int = 0,
@@ -95,12 +96,13 @@ def _check_polygon_overlap(
     operation = "and"
     return boolean(polygonA, polygonB, operation, layer, datatype, maxPoints, precision)
 
-# ? Testing wrapper for the private function _check_polygon_overlap
-wrapper_check_polygon_overlap = _check_polygon_overlap    
+# ? Testing wrapper for the private function check_polygon_overlap
+wrappercheck_polygon_overlap = check_polygon_overlap    
 
-def _bool_polygon_overlap_check(
+def bool_polygon_overlap_check(
     polygonA: PolygonSet,
     polygonB: PolygonSet,
+    lock = False
 ) -> bool:
     """_summary_
     Performs a boolean check 
@@ -112,13 +114,11 @@ def _bool_polygon_overlap_check(
         bool:   returns wether the two polygons overlap or not
                 True: They overlap; False: They don't overlap
     """
-    return not ( _check_polygon_overlap(polygonA, polygonB) is None )
-# ? Testing wrapper for the private function _check_neighbour_direction
-wrapper_bool_polygon_overlap_check = _bool_polygon_overlap_check
+    return not ( check_polygon_overlap(polygonA, polygonB) is None )
+# ? Testing wrapper for the private function check_neighbour_direction
+wrapperbool_polygon_overlap_check = bool_polygon_overlap_check
 
-
-
-def _check_same_polygon(
+def check_same_polygon(
     polyA,
     polyB,
     maxPoints: int = 199,
@@ -150,10 +150,44 @@ def _check_same_polygon(
     # check if the interception of the two polygons is equal to both of them, or
     # if the not operation (polyA - polyB) is equal to an empty space of points/polygons
     return len(boolean(polyA, polyB, "not", layer, datatype, maxPoints, precision).polygons) == 0
-# ? Testing wrapper for the private function _check_same_polygon
-wrapper_check_same_polygon = _check_same_polygon    
+# ? Testing wrapper for the private function check_same_polygon
+wrappercheck_same_polygon = check_same_polygon    
 
-def _find_centroid(
+def check_polygon_contains_polygon(
+    polyA,
+    polyB,
+    maxPoints = 199,
+    precision = 1e-3,
+) -> bool:
+    """_summary_
+    Checks if polygon A contains polygon B
+    Args:
+        polyA       (np.array)  : vertices of the polygon
+        polyB       (np.array)  : vertices of the polygon
+        maxPoints   (int)       : maximum number of points inside the polygon
+        precision   (float)     : precision of the comparison
+    Returns:
+        bool: returns wether polygon A contains polygon B or not
+                True : polygon A contains polygon B; False: polygon A doesn't contain polygon B
+    """
+    # check if the received polygons are valid
+    if type(polyA) != Polygon and type(polyA) != PolygonSet and type(polyA) != Rectangle and type(polyA) != Path:
+        raise TypeError("polyA must be a PolygonSet, Polygon, Rectangle or Path object!")
+    if type(polyB) != Polygon and type(polyB) != PolygonSet and type(polyB) != Rectangle and type(polyB) != Path:
+        raise TypeError("polyB must be a PolygonSet, Polygon, Rectangle or Path object!")
+    # check if the layers and datatype are the same
+    if polyA.layers[0] != polyB.layers[0]:
+        return False
+    layer = polyA.layers[0]
+    if polyA.datatypes[0] != polyB.datatypes[0]:
+        return False
+    datatype = polyA.datatypes[0]
+    # if the union of the two polygons is equal to the polygon A, then polygon A contains polygon B
+    # which is equal to checking if : (polyA U polyB) NOT polyA == 0
+    unionAB = boolean(polyA, polyB, "or", layer, datatype, maxPoints, precision)
+    return  check_same_polygon(unionAB, polyA, maxPoints, precision) or check_same_polygon(polyA, polyB, maxPoints, precision)
+    
+def find_centroid(
     poly: np.array,
 ) -> list:
     """_summary_
@@ -185,10 +219,10 @@ def _find_centroid(
     cent[1] = cent[1]/ (6.0*signedArea)
     return cent
 
-# ? Testing wrapper for the private function _find_centroid
-wrapper_find_centroid = _find_centroid
+# ? Testing wrapper for the private function find_centroid
+wrapperfind_centroid = find_centroid
 
-def _unit_vec(
+def unit_vec(
     pointA: list,
     pointB: list,
 ) -> list:
@@ -202,10 +236,10 @@ def _unit_vec(
     vec = [pointB[0] - pointA[0], pointB[1] - pointA[1]]
     return [ vec[0]/np.linalg.norm(vec), vec[1]/np.linalg.norm(vec) ]
 
-# ? Testing wrapper for the private function _unit_vec
-wrapper_unit_vec = _unit_vec
+# ? Testing wrapper for the private function unit_vec
+wrapperunit_vec = unit_vec
 
-def _saturate_vector(
+def saturate_vector(
     vec: list
 ) -> list:
     """_summary_
@@ -218,10 +252,10 @@ def _saturate_vector(
     vx = 1 if vec[0] >= 0.5 else (-1 if vec[0] < -0.5 else 0)
     vy = 1 if vec[1] >= 0.5 else (-1 if vec[1] < -0.5 else 0)
     return [vx, vy]
-# ? Testing wrapper for the private function _saturate_vector
-wrapper_saturate_vector = _saturate_vector
+# ? Testing wrapper for the private function saturate_vector
+wrappersaturate_vector = saturate_vector
 
-def _check_neighbour_direction(
+def check_neighbour_direction(
     poly: np.array,
     neighbour: np.array,    
 ) -> PolygonDirection:
@@ -236,18 +270,18 @@ def _check_neighbour_direction(
         PolygonDirection: the direction in which the polygon intercepts
     """
     # check if the polygon and its neighbour intersect
-    if not _bool_polygon_overlap_check(poly, neighbour):
+    if not bool_polygon_overlap_check(poly, neighbour):
         # if they don't, return no direction
         return None
     # if they do,
     # compute the centers of each polygon, assuming both are squares and convex hulls
-    center1 = _find_centroid(poly)
-    center2 = _find_centroid(neighbour)
+    center1 = find_centroid(poly)
+    center2 = find_centroid(neighbour)
     # from the center point of the polygons,
     # check the direction of the neighbour , in relation to the polygon
-    direction_vec = _unit_vec(center1, center2)
+    direction_vec = unit_vec(center1, center2)
     # saturate the direction in North, South, East, West
-    direction = _saturate_vector(direction_vec)
+    direction = saturate_vector(direction_vec)
     #return the direction
     if direction == [0,1]:
         return PolygonDirection.NORTH
@@ -267,10 +301,10 @@ def _check_neighbour_direction(
         return PolygonDirection.SOUTH_WEST
     else: 
         return None
-# ? Testing wrapper for the private function _check_neighbour_direction
-wrapper_check_neighbour_direction = _check_neighbour_direction
+# ? Testing wrapper for the private function check_neighbour_direction
+wrappercheck_neighbour_direction = check_neighbour_direction
 
-def _get_direction_between_rects(
+def get_direction_between_rects(
     poly: np.array,
     neighbour: np.array,    
 ) -> PolygonDirection:
@@ -285,7 +319,7 @@ def _get_direction_between_rects(
     if len(poly) != 4 or len(neighbour) != 4:
         raise ValueError("Rectangles must have 4 vertices only!")
     # get the 8-side direction between the two rectangles
-    direction = _check_neighbour_direction(poly, neighbour)
+    direction = check_neighbour_direction(poly, neighbour)
     # check which side (horizontal or vertical) is the bigger
     verd = np.max([y for y in poly[:,1]]) - np.min([y for y in poly[:,1]])
     hord = np.max([x for x in poly[:,0]]) - np.min([x for x in poly[:,0]])
@@ -307,10 +341,10 @@ def _get_direction_between_rects(
         else:
             pass # proceed
     return retDir
-# ? Testing wrapper for the private function _get_direction_between_rects
-wrapper_get_direction_between_rects = _get_direction_between_rects
+# ? Testing wrapper for the private function get_direction_between_rects
+wrapperget_direction_between_rects = get_direction_between_rects
 
-def _fragment_polygon(
+def fragment_polygon(
     poly,
     maxPoints = 199,
     precision = 1e-3,
@@ -328,36 +362,36 @@ def _fragment_polygon(
         raise TypeError("poly must be a PolygonSet, Polygon, Rectangle or Path object!")
     return poly.fracture(max_points = maxPoints, precision = precision)
     
-# ? Testing wrapper for the private function _fragment_polygon
-wrapper_fragment_polygon = _fragment_polygon
+# ? Testing wrapper for the private function fragment_polygon
+wrapperfragment_polygon = fragment_polygon
 
 def fragment_net(
     name: str,
-    cell: GdsCell,
+    cell: Cell,
     maxPoints = 199,
     precision = 1e-3,
-) -> GdsCell:
+) -> Cell:
     """_summary_
     Fragments the net into a Cell of PolygonSet
     objects resulting from horizontal and vertical
     cuts in each polygon, and returns it
     Args:
         name        (str)       : the name of the cell
-        cell        (GdsCell)   : GdsCell object containing the net
+        cell        (Cell)   : Cell object containing the net
         maxPoints   (int)       : maximum number of points inside the polygon
         precision   (float)     : precision of the cuts
     """
     # create a new gds cell, to which the fragments will be added
-    net = GdsCell(name, exclude_from_current = True)
+    net = Cell(name, exclude_from_current = True)
     for (poly, path, label, references) in cell:
-        net.add(_fragment_polygon(poly, maxPoints, precision))
-        net.add(_fragment_polygon(path, maxPoints, precision))
+        net.add(fragment_polygon(poly, maxPoints, precision))
+        net.add(fragment_polygon(path, maxPoints, precision))
         net.add(label)
         net.add(references)
     return net
 
-def _get_polygons_by_spec(
-    cell: GdsCell,
+def get_polygons_by_spec(
+    cell: Cell,
     layer,
     datatype,
 ) -> list:
@@ -369,125 +403,159 @@ def _get_polygons_by_spec(
             polys.append(path)
     return polys
 
-def _extract_nets_through_intersect(
-    layout: GdsCell,
-    nets: GdsLibrary,
-    gdsTable: GdsTable,
-) -> GdsLibrary:
+def get_polygon_dict(
+    cell: Cell,
+    specs: list,
+) -> dict:
     """_summary_
-    Extracts a metal net from a GdsCell object by performing
-    multiple polygon boolean operations,
-    returning a GdsLibrary with the extracted nets
+    Gets a dictionary of polygons by spec
     Args:
-        layout (GdsCell) : GdsCell object containing the layout
+        cell        (Cell)   : Cell object containing the net
+        spec        (list)      : list of layer, datatype and name
     Returns:
-        GdsLibrary : GdsLibrary object containing the extracted nets
-    General Algorithm:
-    
-    # following the order of highest metal layer to lowest metal layer
-    # first layer:
-    # if the metal alyer is a routing metal layer
-        # 1 attribute a net label to the polygon;
-        # 2 for each polygon of the same layer, check which polygons intersect
-        # 3 if the polygon intersects with another polygon, they must have the same net label
-        # 4 if the polygon does not intersect with another polygon, it must be have a different label
-    
-    # vias layer, and not a routing metal layer
-        # 1 for each via, check the polygon that intersects it in the metal layer above
-        # 2 the via will hold the net label of the polygon that intersects it
-    # routing metal layers:
-        # 1 for each polygon, check which via intersect it in the metal layer above, and give the same net label
-        # 2 if the polygon does not intersect with a via, give a different label
-    
-    # for all non-via metal layers:
-        # 1 for each polygon, check if it intersects with a via
-        # 2 if it does, go on
-        # 3 if it does not, check if it intersects with another polygon of the same layer
-        # 4 if it does, attribute the same net label to both
+        dict: dictionary of {(layer,datatype): [polygons]}
     """
-    logger.info("Extracting metal nets through geometry processing...")
-    labelId = 0
-    net = "net"
-    
-    labelNames = []
-    labels = [] # recognized labels
-    cell = layout.copy()
-    # get the ordered metal layers and 
-    # construct the "name" : (layer, datatype) map
-    # from mcon, until the last metal layer
-    via = "via"
-    met = "met"
-    maxMetalNum = 15
-    layerMap = {}
-    layerMap["mcon"] = getGdsLayerDatatypeFromLayerNamePurpose("mcon", GdsLayerPurpose.DRAWING)
-    layerMap["via"] = getGdsLayerDatatypeFromLayerNamePurpose("via", GdsLayerPurpose.DRAWING)
-    layerMap["met1"] = getGdsLayerDatatypeFromLayerNamePurpose("met1", GdsLayerPurpose.DRAWING)
-    for i in range(2,maxMetalNum):#maximum number of metal layers 
-        aux = getGdsLayerDatatypeFromLayerNamePurpose("{}{}".format(via,str(i)), GdsLayerPurpose.DRAWING).__dict__()
-        if aux != None:
-            layerMap["{}{}".format(via,str(i))] = aux
-            lastVia = i
-        aux = getGdsLayerDatatypeFromLayerNamePurpose("{}{}".format(met,str(i)), GdsLayerPurpose.DRAWING).__dict__()
-        if aux != None:
-            layerMap["{}{}".format(met,str(i))] = aux
-            lastMetal = i
-        else: # if the routing metal layer is not found, stop
-            break
-    
-    # start from the last metal layer and go down
-    layer,datatype = layerMap.values()[-1]
-    activeLabel = "{}{}".format(net,str(labelId))
-    for polyA in _get_polygons_by_spec(cell, layer, datatype):
-        for polyB in _get_polygons_by_spec(cell, layer, datatype):
-            if not(_check_same_polygon(polyA, polyB)): # if they are not the same polygon
-                # if they overlap
-                if _bool_polygon_overlap_check(polyA, polyB):
-                    # they must have the same label
-                    pass
-        
-        
-    
-    logger.info("Net extraction is complete. Nets found :{}".format(len(labels)))
-    logger.warning("Net renaming is advised!")
-    pass
-
-def extract_nets(
-    layout: GdsCell  
-) -> GdsLibrary:
+    ret = {}
+    if len(specs) == 0:
+        return ret
+    if type(specs[0]) != tuple or type(specs[0]) != list and len(specs[0]) != 2:
+        raise TypeError("The specifications must be a list of tuples or lists of length 2!")
+    for spec in specs:
+        layer = spec[0]
+        datatype = spec[1]
+        if (layer, datatype) in ret.keys():
+            raise ValueError("The specifications must be unique!")
+        ret[(layer, datatype)] = get_polygons_by_spec(cell, layer, datatype)
+    return ret
+      
+def check_polygon_in_cell(
+    polygon,
+    cell: Cell,
+) -> bool:
     """_summary_
-    Tries to extracts a metal net from a GdsCell object by 
-    detecting the labels of each polygon,
-    returning a GdsLibrary with the extracted nets.
-    If the labels mean nothing, tries to extract using 
-    _extract_nets_through_intersect function
+    Checks if a polygon is inside a cell already
     Args:
-        layout (GdsCell) : GdsCell object containing the layout
-    Returns:
-        GdsLibrary : GdsLibrary object containing the extracted nets
-    """
-    newLib = GdsLibrary("{}_extracted_nets".format(layout.name))
-    labels = []
-    netName = ""
-    for (poly, path, label, reference) in layout:
-        if label != None:
-            netName = label.text
-        if netName == "":
-            #break the loop and proceed te the next method
-            return _extract_nets_through_intersect(layout)
-        
-        if not netName in labels:
-            labels.append(netName)
-            # create a new cell
-            net = GdsCell(netName, exclude_from_current = True)
-            # add the cell to the new library
-            newLib.add(net)
-        # add proceed to the reconstruction of the net
-        newLib.cells[netName].add(poly)
-        newLib.cells[netName].add(path)
-        newLib.cells[netName].add(label)
-        newLib.cells[netName].add(reference)
-    return newLib
+        polygon (_type_): _description_
+        cell (Cell): _description_
 
+    Returns:
+        bool: _description_
+    """
+    # check if the received polygons are valid
+    if type(polygon) != Polygon and type(polygon) != PolygonSet and type(polygon) != Rectangle and type(polygon) != Path:
+        raise TypeError("polyA must be a PolygonSet, Polygon, Rectangle or Path object!")
+    layer = polygon.layers[0]
+    datatype = polygon.datatypes[0]
+    for other in get_polygons_by_spec(cell, layer, datatype):
+        if check_same_polygon(polygon, other):
+            return True
+    return False
+
+def check_via_connection(
+    polyA,
+    via,
+    polyB
+) -> bool:
+    """_summary_
+    Checks if the polygon A and B are connected through
+    the specified via
+    Args:
+        polyA   (PolygonSet): polygon in metal layer above
+        via     (PolygonSet): polygon in metal layer between
+        polyB   (PolygonSet): polygon in metal layer below
+    Returns:
+        bool: True if the polygons are connected through the via
+                False otherwise
+    Notes: 
+        # ! This function assumes that the polygons A, via and B
+        # ! are in three consecutive gds layers! If they are not, the provided
+        # ! result will not mean anything
+    """
+    # check if the received polygons are valid
+    if type(polyA) != Polygon and type(polyA) != PolygonSet and type(polyA) != Rectangle and type(polyA) != Path:
+        raise TypeError("polyA must be a PolygonSet, Polygon, Rectangle or Path object!")
+    if type(polyB) != Polygon and type(polyB) != PolygonSet and type(polyB) != Rectangle and type(polyB) != Path:
+        raise TypeError("polyB must be a PolygonSet, Polygon, Rectangle or Path object!")
+    if type(via) != Polygon and type(via) != PolygonSet and type(via) != Rectangle and type(via) != Path:
+        raise TypeError("via must be a PolygonSet, Polygon, Rectangle or Path object!")
+    # check if the polygons are the same in pairs
+    if check_same_polygon(polyA, polyB):
+        return False
+    if check_same_polygon(polyA, via):
+        return False
+    if check_same_polygon(polyB, via):
+        return False
+    
+    # check if the layers are not the same
+    if polyA.layers[0] == polyB.layers[0]:
+        return False
+    if polyA.layers[0] == via.layers[0]:
+        return False
+    if polyB.layers[0] == via.layers[0]:
+        return False
+    # finally , check for mutual overlap of vias by the two polygons
+    return bool_polygon_overlap_check(polyA,via) and bool_polygon_overlap_check(polyB,via)
+
+
+def join_overlapping_polygons_cell(
+    cell: Cell,
+    layerMap: dict,
+) -> Cell:
+    """_summary_
+    Joins overlapping the overlapping polygons for each metal 
+    layer of a gds cell (resembling a layout), in order to
+    join multiple intercepting polygons in a single polygon.
+    Args:
+        cell        (Cell)  : the gdspy.Cell object
+        layerMap    (dict)  : dictionary of {"layer name": (layer, datatype)} tuples
+    Returns:
+        Cell: the new gdspy.Cell object with the joined polygons
+    """
+    newCell = Cell(cell.name+"_joined", exclude_from_current = True)
+    polygons = cell.get_polygons(by_spec = list(layerMap.values()))
+    metalIds = list(polygons.keys())
+    for layer, datatype in metalIds:
+        poly = boolean( polygons[(layer, datatype)], polygons[(layer, datatype)], 'or', layer = layer, datatype = datatype )
+        poly = PolygonSet( poly ,layer = layer, datatype = datatype )
+        newCell.add(poly)
+    return newCell
+
+def fuse_overlapping_cells(
+    cellA: Cell,
+    cellB: Cell,
+    maxPoints: int = 199,
+    precision: float = 1e-3, 
+) -> Cell:
+    """_summary_
+    Fuses both cells into a single cell if both cells
+    have at least one polygon of any layer in common
+    Args:
+        cellA       (Cell): gdspy Cell object
+        cellB       (Cell): gdspy Cell object
+        maxPoints   (int, optional): Maximum number of points inside polys when uniting cells. Defaults to 199.
+        precision (float, optional): Precision of the cuts when performing union of cells.Defaults to 1e-3.
+
+    Returns:
+        Cell: Cells resulting from the union of cellA and cellB
+        None: If no polygon of any layer in common
+    """
+    # get the layers that are common to both cells
+    layersA = cellA.get_layers()
+    datatypesA = cellA.get_datatypes()
+    ldA = list(zip(layersA, datatypesA))
+    layersB = cellB.get_layers()
+    datatypesB = cellB.get_datatypes()
+    ldB = list(zip(layersB, datatypesB))
+    commonLd = [ld for ld in ldA if ld in ldB] # get the common layer,datatype tuples to both cells
+    for layer,datatype in commonLd:
+        for polyA in get_polygons_by_spec(cellA, layer, datatype):
+            if check_polygon_in_cell(polyA, cellB):
+                # fuse the cells together and return it
+                fuseCell = cellA.copy(cellA.name)
+                for item in cellB:
+                    fuseCell.add(item)
+                return fuseCell
+    return None
 
 def select_abstraction_depth(
     name: str,
@@ -509,7 +577,7 @@ def select_abstraction_depth(
     newLib = GdsLibrary(name)
     for cell in lib:
         # create a new cell
-        newCell = GdsCell(cell.name, exclude_from_current = True)
+        newCell = Cell(cell.name, exclude_from_current = True)
         # add the polygons, paths, labels to the new cell
         newCell.add(cell.get_polygons(depth = depth))
         newCell.add(cell.get_polygonsets(depth = depth))
@@ -522,14 +590,14 @@ def select_abstraction_depth(
 
 def add_port(
     port : SpeedsterPort,
-    layout: GdsCell,
+    layout: Cell,
     table: GdsTable,
 ) -> None:
     """_summary_
     Adds/Draws a port to the a layout cell
     Args:
         port    (SpeedsterPort) : SpeedsterPort object
-        layout  (GdsCell)       : a gdspy GdsCell object containing the layout
+        layout  (Cell)       : a gdspy Cell object containing the layout
                                     to which the port will be added
     """
     layer, datatype = getGdsLayerDatatypeFromLayerNamePurpose(table, port.layer, GdsLayerPurpose(port.purpose))

@@ -9,6 +9,8 @@ from spdstrutil import (
     getGdsTableEntriesFromPurpose,
     getGdsTableEntriesFromLayerName,
     getGdsLayerDatatypeFromLayerNamePurpose,
+    getDrawingMetalLayersMap,
+    addBackannotation,
 )
 
 def test_version():
@@ -45,7 +47,7 @@ def test_filter_gds_table_by_purpose():
     gdsTab = readGdsTable(path)
     #print(str(gdsTab))
     newtab = getGdsTableEntriesFromPurpose(gdsTab, GdsLayerPurpose.DRAWING)
-    print(str(newtab))
+    #print(str(newtab))
     assert True
 
 def test_filter_gds_table_by_layer_name():
@@ -53,7 +55,7 @@ def test_filter_gds_table_by_layer_name():
     gdsTab = readGdsTable(path)
     #print(str(gdsTab))
     newtab = getGdsTableEntriesFromLayerName(gdsTab, "met4")
-    print(str(newtab))
+    #print(str(newtab))
     assert True
 
 def test_get_gds_layer_datatype_from_layer_name_purpose():
@@ -61,7 +63,21 @@ def test_get_gds_layer_datatype_from_layer_name_purpose():
     gdsTab = readGdsTable(path)
     #print(str(gdsTab))
     datatype = getGdsLayerDatatypeFromLayerNamePurpose(gdsTab, "met4", GdsLayerPurpose.PIN)
-    print(datatype)
+    #print(datatype)
+    assert True
+
+def test_get_metal_drawing_layers():
+    path = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/resources/sky130/skywater-pdk-libs-sky130_fd_pr/skywater130/gds_layers.csv"
+    gdsTab = readGdsTable(path)
+    layerMap = getDrawingMetalLayersMap(gdsTab)
+    print(layerMap)
+    assert True
+
+def test_add_backannotation():
+    path = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/resources/sky130/skywater-pdk-libs-sky130_fd_pr/skywater130/gds_layers.csv"
+    gdsTab = readGdsTable(path)
+    gdsTab = addBackannotation(gdsTab)
+    print(gdsTab)
     assert True
     
     
