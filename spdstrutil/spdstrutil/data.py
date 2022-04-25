@@ -10,6 +10,8 @@ and the user
 [contact]   das.dias@campus.fct.unl.pt
 """
 from enum import Enum
+from collections import defaultdict
+from itertools import starmap
 
 class Unimplemented(object):
     """_summary_
@@ -52,6 +54,7 @@ class GdsLayerPurpose(Enum):
     MASK_DROP   = "mask drop"
     WAFFLE_DROP = "waffle drop"
     BACKANNOTATION = "backannotation"
+    HIGHLIGHTING   = "highlighting"
     
 class GdsTable(dict):
     """_summary_
@@ -107,25 +110,25 @@ class GdsTable(dict):
         return key in self.table.keys()
 
     def __iter__(self) -> iter:
-        return iter(self.table.key())
+        return iter(self.table.keys())
     
-    def items(self) -> list:
+    def items(self) -> iter:
         return self.table.items()
     
-    def keys(self) -> list:
-        return list(self.table.keys())
+    def keys(self) -> iter:
+        return self.table.keys()
     
-    def values(self) -> list:
-        return list(self.table.values())
+    def values(self) -> iter:
+        return self.table.values()
     
-    def purposes(self) -> list:
-        return list(self.table.values()["purpose"])
+    def purposes(self) -> iter:
+        return self.table.values()["purpose"]
     
     def names(self) -> list:
-        return list(self.table.values()["name"])
+        return self.table.values()["name"]
     
     def descriptions(self) -> list:
-        return list(self.table.values()["description"])
+        return self.table.values()["description"]
     
     def add(
         self,
@@ -183,5 +186,132 @@ class GdsTable(dict):
             dataType (int): the data type
         """
         return self.table[(layer, dataType)]["purpose"]
+    # TODO: ADD FILTER FUNCTIONS
+    def getGdsTableEntriesFromPurpose(self, purpose: GdsLayerPurpose):
+        """_summary_
+        Get a new GdsTable object from a GdsTable object
+        by selecting only the rows with the specified purpose
+        Args:
+            other   (GdsTable)          : GdsTable object to be filtered
+            purpose (GdsLayerPurpose)   : purpose to be aapplied as filter
+        Returns:
+            GdsTable: filtered GdsTable object
+        """
+        newTab = GdsTable()
+        for key, value in self.items():
+            if purpose in value["purpose"]:
+                newTab.table[key] = value
+        return newTab if len(newTab.table) > 0 else None
 
+    def getGdsTableEntriesFromLayerName(self, layerName: str):
+        """_summary_
+        Get a new GdsTable object from a GdsTable object
+        by selecting only the rows with the specified layer name
+        Args:
+            other   (GdsTable)          : GdsTable object to be filtered
+            layerName (str)             : layer name to be aapplied as filter
+        Returns:
+            GdsTable: filtered GdsTable object
+        """
+        newTab = GdsTable()
+        for key, value in self.items():
+            if layerName in value["name"]:
+                newTab.table[key] = value
+        return newTab if len(newTab.table) > 0 else None
+
+    def getGdsLayerDatatypeFromLayerNamePurpose(self, layerName: str, purpose: GdsLayerPurpose) -> list:
+        """_summary_
+        Get the layer,datatype of a layer from a GdsTable object
+        by selecting only the rows with the specified layer name and purpose
+        Args:
+            other       (GdsTable)  : GdsTable object to be filtered
+            layerName   (str)       : layer name to be aapplied as filter
+            purpose     (str)       : purpose to be aapplied as filter
+        Returns:
+            list[tuple]: list of layer,datatype tuples for each layer
+        """
+        ret:list = []
+        for key, value in self.items():
+            if layerName == value["name"] and purpose in value["purpose"]:
+                ret.append(key)
+        return ret if len(ret) > 0 else None
     
+    def getDrawingMetalLayersMap(self, maxMetalNum = 15) -> dict:
+        """_summary_
+        Get a dictionary with the metal layers used for drawing
+        metal shapes and interconnects in the imported gds table.
+        Args:
+            table       (GdsTable)      : GDS table associated with a given tech node.
+            maxMetalNum (int, optional) : Maximum number of routing metal layers. Defaults to 15.
+        Returns:
+            dict: "layer name" : (layer, datatype) map
+        """
+        # get the ordered metal layers and 
+        via = "via"
+        met = "met"
+        layerMap = {}
+        # don't use the first layer, since it is a via layer
+        #layerMap["mcon"] = getGdsLayerDatatypeFromLayerNamePurpose("mcon", GdsLayerPurpose.DRAWING)
+        layerMap["met1"] = self.getGdsLayerDatatypeFromLayerNamePurpose("met1", GdsLayerPurpose.DRAWING)
+        layerMap["via"] = self.getGdsLayerDatatypeFromLayerNamePurpose( "via", GdsLayerPurpose.DRAWING)
+        for i in range(2,maxMetalNum):#maximum number of metal layers 
+            aux = self.getGdsLayerDatatypeFromLayerNamePurpose("{}{}".format(met,str(i)), GdsLayerPurpose.DRAWING)
+            if aux != None:
+                layerMap["{}{}".format(met,str(i))] = aux[0]
+                lastVia = i
+            else: # if the routing metal layer is not found, stop
+                break
+            aux = self.getGdsLayerDatatypeFromLayerNamePurpose("{}{}".format(via,str(i)), GdsLayerPurpose.DRAWING)
+            if aux != None:
+                layerMap["{}{}".format(via,str(i))] = aux[0]
+                lastMetal = i
+        return layerMap
+    
+    def addBackannotation(self):
+        """_summary_
+        Add dedicated drawing layers for performing backannotation
+        on the layout
+        Args:
+            table (GdsTable): the imported table to which the items will be added
+        Returns:
+            GdsTable: the same library as the one received, but with the added items
+        """
+        # check if the backannotation layer is already present
+        purposeTable = self.getGdsTableEntriesFromPurpose(GdsLayerPurpose.BACKANNOTATION)
+        if purposeTable != None:
+            raise Exception("Backannotation layer already present")
+        
+        # back annotation will only be performed on metal layers or vias layers
+        metalLayerNames = list(self.getDrawingMetalLayersMap().keys())
+        forbiddenLayerDatatypes = defaultdict(list) # list of forbidden (layer, datatype) tuples
+        possibleLayerDatatypes = {} # list of possible (layer, datatype) tuples
+        for name in metalLayerNames:
+            for key in self.getGdsTableEntriesFromLayerName(name).keys():
+                if key not in forbiddenLayerDatatypes[name]:
+                    forbiddenLayerDatatypes[name].append(key) 
+            for key in forbiddenLayerDatatypes[name]:
+                if (key[0], key[1]+1) not in forbiddenLayerDatatypes[name]:
+                    possibleLayerDatatypes[name] = (key[0], key[1]+1)
+        for name, key in possibleLayerDatatypes.items():
+            self.add(key[0], key[1], name, [GdsLayerPurpose.BACKANNOTATION.name], "{} backannotation".format(name))
+        return self
+
+    def addHighlight(self):
+        """_summary_
+        Add dedicated a layer dedicated to
+        highlighting the selected net
+        Args:
+            table (GdsTable): the imported table to which the items will be added
+        Returns:
+            GdsTable: the same library as the one received, but with the added items
+        """
+        # check if the backannotation layer is already present
+        highlightingTable = self.getGdsTableEntriesFromPurpose(GdsLayerPurpose.HIGHLIGHTING)
+        if highlightingTable != None:
+            raise Exception("Highlighting layer already present")
+        
+        for layer, datatype in self.keys():
+            if (layer+1, 0) not in self.keys():
+                self.add(layer+1, 0, "highlight", [GdsLayerPurpose.HIGHLIGHTING.name], "net highlighting")
+                break # break out of loop
+        return self

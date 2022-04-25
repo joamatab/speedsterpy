@@ -78,4 +78,4 @@ def readGdsTable(filePath = "") -> GdsTable:
         with open(path, "r") as yamlFile:
             gdsTableDict = yaml.load(yamlFile, Loader=yaml.FullLoader)
         gdsTable.parseData(gdsTableDict)
-    return gdsTable
+    return gdsTable if len(gdsTable.table) > 0 else None

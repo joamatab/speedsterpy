@@ -8,9 +8,10 @@ in order to enable point to point resistance extraction
 [contact]   das.dias@campus.fct.unl.pt
 """
 from loguru import logger
+import itertools
 from enum import Enum
 import numpy as np
-from gdspy import(
+from gdstk import(
     GdsLibrary,
     Cell,
     PolygonSet,
@@ -30,23 +31,9 @@ from .data import(
 from spdstrutil import (
     GdsTable,
     GdsLayerPurpose,
-    getGdsLayerDatatypeFromLayerNamePurpose,
-    getDrawingMetalLayersMap,
 )
 
-def check_point_inside_polygon(
-    polygon: PolygonSet,
-    point: list,
-) -> bool:
-    """_summary_
-    Checks if a point is inside a polygon
-    Args:
-        polygon (PolygonSet): Polygon Set object
-        point   (list)      : [x:float, y: float] 2 items list
-    Returns:
-        bool: returns wether the point is inside the polygon or not
-    """
-    return inside(point, polygon)[0]
+
 class PolygonDirection(Enum):
     """_summary_
     Enum class to define the direction of 
@@ -73,6 +60,20 @@ class PolygonDirection(Enum):
     WEST        = 7#"-x"
     NORTH_WEST  = 8
 
+def check_point_inside_polygon(
+    polygon: PolygonSet,
+    point: list,
+) -> bool:
+    """_summary_
+    Checks if a point is inside a polygon
+    Args:
+        polygon (PolygonSet): Polygon Set object
+        point   (list)      : [x:float, y: float] 2 items list
+    Returns:
+        bool: returns wether the point is inside the polygon or not
+    """
+    return inside(point, polygon)[0]
+
 
 def check_polygon_overlap(
     polygonA: PolygonSet,
@@ -93,11 +94,7 @@ def check_polygon_overlap(
         maxPoints(int)       : maximum number of points inside the polygon
         precision(float)     : precision of the cuts
     """
-    operation = "and"
-    return boolean(polygonA, polygonB, operation, layer, datatype, maxPoints, precision)
-
-# ? Testing wrapper for the private function check_polygon_overlap
-wrappercheck_polygon_overlap = check_polygon_overlap    
+    return boolean(polygonA, polygonB,'and', layer, datatype, maxPoints, precision)    
 
 def bool_polygon_overlap_check(
     polygonA: PolygonSet,
@@ -115,12 +112,11 @@ def bool_polygon_overlap_check(
                 True: They overlap; False: They don't overlap
     """
     return not ( check_polygon_overlap(polygonA, polygonB) is None )
-# ? Testing wrapper for the private function check_neighbour_direction
-wrapperbool_polygon_overlap_check = bool_polygon_overlap_check
+
 
 def check_same_polygon(
-    polyA,
-    polyB,
+    polyA: PolygonSet,
+    polyB: PolygonSet,
     maxPoints: int = 199,
     precision = 1e-3,
 ) -> bool:
@@ -135,11 +131,7 @@ def check_same_polygon(
         bool: returns wether the two polygons are the same or not
                 True : They are the same; False: They are not the same
     """
-    # check if the received polygons are valid
-    if type(polyA) != Polygon and type(polyA) != PolygonSet and type(polyA) != Rectangle and type(polyA) != Path:
-        raise TypeError("polyA must be a PolygonSet, Polygon, Rectangle or Path object!")
-    if type(polyB) != Polygon and type(polyB) != PolygonSet and type(polyB) != Rectangle and type(polyB) != Path:
-        raise TypeError("polyB must be a PolygonSet, Polygon, Rectangle or Path object!")
+    
     # check if the layers and datatype are the same
     if polyA.layers[0] != polyB.layers[0]:
         return False
@@ -150,8 +142,7 @@ def check_same_polygon(
     # check if the interception of the two polygons is equal to both of them, or
     # if the not operation (polyA - polyB) is equal to an empty space of points/polygons
     return len(boolean(polyA, polyB, "not", layer, datatype, maxPoints, precision).polygons) == 0
-# ? Testing wrapper for the private function check_same_polygon
-wrappercheck_same_polygon = check_same_polygon    
+ 
 
 def check_polygon_contains_polygon(
     polyA,
@@ -201,11 +192,12 @@ def find_centroid(
     nPoly = len(poly)
     signedArea = 0.0
     # for all the vertices of the polygon
-    for k in range(nPoly):
-        x0 = poly[k][0]
-        y0 = poly[k][1]
-        x1 = poly[(k+1) % nPoly][0]
-        y1 = poly[(k+1) % nPoly][1]
+    for k, point in enumerate(nPoly):
+        x0 = point[0]
+        y0 = point[1]
+        opposite_point = poly[(k+1) % nPoly]
+        x1 = opposite_point[0]
+        y1 = opposite_point[1]
         # compute the value of the area composed of the two vertices
         # using the shoelace formula
         A = x0*y1 - x1*y0
@@ -233,7 +225,7 @@ def unit_vec(
     Returns:
         list: [x:float, y: float] 2 items list
     """
-    vec = [pointB[0] - pointA[0], pointB[1] - pointA[1]]
+    vec: list = [pointB[0] - pointA[0], pointB[1] - pointA[1]]
     return [ vec[0]/np.linalg.norm(vec), vec[1]/np.linalg.norm(vec) ]
 
 # ? Testing wrapper for the private function unit_vec
@@ -345,7 +337,7 @@ def get_direction_between_rects(
 wrapperget_direction_between_rects = get_direction_between_rects
 
 def fragment_polygon(
-    poly,
+    poly: PolygonSet,
     maxPoints = 199,
     precision = 1e-3,
 ) -> PolygonSet:
@@ -358,8 +350,6 @@ def fragment_polygon(
     Returns:
         PolygonSet: the polygon set resulting from the fragmentation operation
     """
-    if type(poly) != Polygon and type(poly) != PolygonSet and type(poly) != Rectangle and type(poly) != Path:
-        raise TypeError("poly must be a PolygonSet, Polygon, Rectangle or Path object!")
     return poly.fracture(max_points = maxPoints, precision = precision)
     
 # ? Testing wrapper for the private function fragment_polygon
@@ -396,11 +386,9 @@ def get_polygons_by_spec(
     datatype,
 ) -> list:
     polys = []
-    for poly, path, _, _ in cell:
+    for poly in itertools.chain(cell.get_polygonsets(), cell.get_paths()):
         if poly.layers[0] == layer and poly.datatypes[0] == datatype:
             polys.append(poly)
-        if path.layers[0] == layer and path.datatypes[0] == datatype:
-            polys.append(path)
     return polys
 
 def get_polygon_dict(
@@ -520,6 +508,7 @@ def join_overlapping_polygons_cell(
         newCell.add(poly)
     return newCell
 
+
 def fuse_overlapping_cells(
     cellA: Cell,
     cellB: Cell,
@@ -552,8 +541,7 @@ def fuse_overlapping_cells(
             if check_polygon_in_cell(polyA, cellB):
                 # fuse the cells together and return it
                 fuseCell = cellA.copy(cellA.name)
-                for item in cellB:
-                    fuseCell.add(item)
+                [fuseCell.add(item) for item in cellB]
                 return fuseCell
     return None
 
@@ -600,6 +588,9 @@ def add_port(
         layout  (Cell)       : a gdspy Cell object containing the layout
                                     to which the port will be added
     """
-    layer, datatype = getGdsLayerDatatypeFromLayerNamePurpose(table, port.layer, GdsLayerPurpose(port.purpose))
+    layer, datatype = table.getGdsLayerDatatypeFromLayerNamePurpose(
+        port.layer, 
+        GdsLayerPurpose(port.purpose)
+    )[0]
     portPoly = Polygon(port.get_polygon(), layer, datatype)
     layout.add(portPoly)

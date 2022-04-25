@@ -25,16 +25,8 @@ class SpeedsterPortType(Enum):
     INPUT = 1
     OUTPUT = 2
     INOUT = 3
-    
-
-# TODO : Develop a SpeedsterPoint class
-# to allow for the representation of points
-# telling the tool if it is an output or input of current
-# the resistance of the point, and if it is a 
-# corner/interconnection or an end point of the path.
 
 
-# TODO : Develop a SpeedsterPort class
 class SpeedsterPort(object):
     __slots__ = [
         "name",
@@ -138,7 +130,7 @@ class SpeedsterPortLibrary(object):
     def __iter__(self):
         return iter(self.ports.values())
     
-    def add(self, port: SpeedsterPort) -> SpeedsterPortLibrary:
+    def add(self, port: SpeedsterPort):
         """_summary_
         Adds a port to the library
         Args:
@@ -151,7 +143,7 @@ class SpeedsterPortLibrary(object):
         self.ports[port.name] = port
         return self
         
-    def remove(self, portName) -> SpeedsterPortLibrary:
+    def remove(self, portName):
         """_summary_
         Remnoves a port from the library
         Args:

@@ -13,7 +13,6 @@ python = "^3.9"
 #external libs
 loguru = "^0.6.0" # logging library for python
 networkx = "^2.7.1" # graph library for python
-gdspy = "^1.6.11" # gdsii ic layout information visualization and parsing" 
 toml = "^0.10.2"
 #native libs
 deflefpy = "^0.1.3"
