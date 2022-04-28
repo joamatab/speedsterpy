@@ -9,8 +9,6 @@ extraction method leveraged by image processing
 """
 from enum import Enum
 import numpy as np
-import sys
-sys.path.append("../spdstrutil")
 from spdstrutil import Unimplemented
 class SpeedsterPortType(Enum):
     """_summary_

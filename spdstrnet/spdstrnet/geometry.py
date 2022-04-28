@@ -10,20 +10,17 @@ in order to enable point to point resistance extraction
 from loguru import logger
 import itertools
 from enum import Enum
+import warnings
 import numpy as np
 from gdstk import(
-    GdsLibrary,
+    Library,
     Cell,
-    PolygonSet,
     Polygon,
-    Rectangle,
-    Path,
-    Text,  # to provide a text annotation system
-    Label, # to provide label knowledge
+    rectangle,
+    RobustPath,
     # functions
     boolean, # perform boolean operations on two polygon sets
-    inside, # check if a point is inside a polygon
-    copy, # create and return a copy of a polygon set
+    inside
 )
 from .data import(
     SpeedsterPort,
@@ -61,63 +58,175 @@ class PolygonDirection(Enum):
     NORTH_WEST  = 8
 
 def check_point_inside_polygon(
-    polygon: PolygonSet,
-    point: list,
+    polygon,
+    point: tuple,
 ) -> bool:
     """_summary_
     Checks if a point is inside a polygon
     Args:
-        polygon (PolygonSet): Polygon Set object
-        point   (list)      : [x:float, y: float] 2 items list
+        polygon (Polygon): Polygon Set object
+        point   (list)      : [x:float, y: float] items list
     Returns:
         bool: returns wether the point is inside the polygon or not
     """
-    return inside(point, polygon)[0]
-
+    if type(point[0]) != float or len(point) != 2:
+        raise ValueError("Point must be a tuple of 2 floats.")
+    return inside([point], polygon)[0]
 
 def check_polygon_overlap(
-    polygonA: PolygonSet,
-    polygonB: PolygonSet,
+    polygonA,
+    polygonB,
     layer: int = 0,
     datatype: int = 0,
-    maxPoints: int = 199,   # max number of points inside the polygon
     precision = 1e-3,
-) -> PolygonSet:
+) -> list:
     """_summary_
     Checks if two polygons overlap, and 
     returns the overlapping region, in case they do
     Args:
-        polygonA (PolygonSet): PolygonSet object
-        polygonB (PolygonSet): PolygonSet object
+        polygonA (Polygon): Polygon object
+        polygonB (Polygon): Polygon object
         layer    (int)       : layer of the resulting polygon from the boolean operation
         dataType (int)       : datatype of the resulting polygon from the boolean operation
-        maxPoints(int)       : maximum number of points inside the polygon
         precision(float)     : precision of the cuts
     """
-    return boolean(polygonA, polygonB,'and', layer, datatype, maxPoints, precision)    
+    polyList = boolean(
+        polygonA, 
+        polygonB,
+        'and', 
+        layer = layer, 
+        datatype = datatype, 
+        precision = precision
+    ) 
+    return polyList if len(polyList) > 0 else None
+
+def get_common_edges(
+    polyA,
+    polyB
+) -> list:
+    pointsA = polyA.points
+    pointsB = polyB.points
+    edges = []
+    def _superposed_collinear_edge(e1, e2):
+        """_summary_
+        Checks if two edges e1 and e2 are collinear and intersect
+        to infer about their intersection, returning it in case 
+        it exists
+        Args:
+            e1 ( array( [p1, p2] ) ): edge1/vector1
+            e2 ( array( [p1, p2] ) ): edge2/vector2
+
+        Returns:
+            ( array( [p1, p2] ) ) : the superposed edge
+        """
+        # compute colinearity
+        # get 3D vectors defined by e1 and e2
+        v1 = [ e1[1][0] - e1[0][0], e1[1][1]- e1[0][1], 0 ]
+        v2 = [ e2[1][0] - e2[0][0], e2[1][1]- e2[0][1], 0 ]
+        # get cross product
+        cp = np.cross(v1,v2)
+        norm_cp = np.sqrt(cp.dot(cp))
+        # infer colinearity
+        if norm_cp != 0.0: # colinearity exists when |v1xv2| = 0
+            return None
+        # compute intersection
+        # get the straight line defined by e1 : y = ax + b -> y-y0 = a * (x-x0) where a = (y1-y0)/(x1-x0) and b = y0 - a*x0
+        with warnings.catch_warnings():
+            warnings.simplefilter("error") # set warnings to error to catch div by zero
+            try:
+                a = (e1[1][1] - e1[0][1]) / ( (e1[1][0] - e1[0][0]) )
+                b = e1[0][1] - a*e1[0][0]
+                # check if the first point of e2 is on top of the straight line defined by the vertices of e1
+                if not np.equal(e2[0][1], ( a*e2[0][0] + b ) ): # y2 == a*x2 + b ?
+                    return None
+            except Exception: # division by zero, infinite slope, the defined line is : x = e1[0][0]
+                a = None
+                # only have to check if the abciss of e2[0] == e1[0][0]
+                if not np.equal(e2[0][0], e1[0][0]):
+                    return None
+        # if it is, check if either the final or the sstarting point of e2 is in the bounding box defined by the vertices of e1
+        bbox = rectangle( e1[0], e1[1] )
+        if not( inside([e2[0]], bbox)[0] or inside([e2[1]], bbox)[0] ):
+            return None
+        # finally, there is actually an intersection, and we must return it
+        # check e2 fully contained in e1
+        if inside([e2[0]], bbox)[0] and inside([e2[1]], bbox)[0]:
+            return e2
+        # check for partial intersection
+        if inside([e2[0]], bbox)[0]:
+            return (e2[0], e1[1])
+        
+        if inside([e2[1]], bbox)[0]:
+            return (e1[0], e2[1])
+        
+        return None
+        
+    for edgeA in zip(pointsA, pointsA[1:]):
+        for edgeB in zip(pointsB, pointsB[1:]):
+            superposed = _superposed_collinear_edge(edgeA, edgeB)
+            if superposed is not None:
+                edges.append(list(superposed))
+        # check last edge
+        edgeB = (pointsB[-1], pointsB[0])
+        superposed = _superposed_collinear_edge(edgeA, edgeB)
+        if superposed is not None:
+            edges.append(list(superposed))
+    # LAST ITERATION 
+    # check last edge
+    edgeA = (pointsA[-1], pointsA[0])
+    for edgeB in zip(pointsB[:-1], pointsB[1:]):
+        superposed = _superposed_collinear_edge(edgeA, edgeB)
+        if superposed is not None:
+            edges.append(list(superposed))
+    # check last edge
+    edgeB = (pointsB[-1], pointsB[0])
+    superposed = _superposed_collinear_edge(edgeA, edgeB)
+    if superposed is not None:
+        edges.append(list(superposed))
+    # convert edges to list of tuples and filter the edges defining a single point
+    edges = [ [tuple(p) for p in edge] for edge in edges if not np.array_equal(edge[0], edge[1])]
+    return edges if len(edges)>0 else None
+
 
 def bool_polygon_overlap_check(
-    polygonA: PolygonSet,
-    polygonB: PolygonSet,
+    polygonA,
+    polygonB,
     lock = False
 ) -> bool:
     """_summary_
     Performs a boolean check 
     to infer if the two polygons overlap
     Args:
-        polygonA (PolygonSet): PolygonSet object
-        polygonB (PolygonSet): PolygonSet object
+        polygonA (Polygon): Polygon object
+        polygonB (Polygon): Polygon object
     Returns:
         bool:   returns wether the two polygons overlap or not
                 True: They overlap; False: They don't overlap
     """
     return not ( check_polygon_overlap(polygonA, polygonB) is None )
 
+def check_neighbour_polygons(
+    polyA,
+    polyB,
+) -> bool:
+    """_summary_
+    Checks if the two polygons have common edges and don't overlap!
+    Args:
+        polygonA (Polygon): Polygon object
+        polygonB (Polygon): Polygon object
+    Returns:
+        bool:   returns wether the two polygons have common edges
+                True: They have common edges; False: They don't have common edges
+    """
+    if polyA.layer == polyB.layer and polyA.datatype == polyB.datatype:
+        if get_common_edges(polyA,polyB) is not None:
+            return True if not bool_polygon_overlap_check(polyA,polyB) else False
+    return False
+
 
 def check_same_polygon(
-    polyA: PolygonSet,
-    polyB: PolygonSet,
-    maxPoints: int = 199,
+    polyA,
+    polyB,
     precision = 1e-3,
 ) -> bool:
     """_summary_
@@ -125,7 +234,6 @@ def check_same_polygon(
     Args:
         polyA       (np.array)  : vertices of the polygon
         polyB       (np.array)  : vertices of the polygon
-        maxPoints   (int)       : maximum number of points inside the polygon
         precision   (float)     : precision of the comparison
     Returns:
         bool: returns wether the two polygons are the same or not
@@ -133,22 +241,21 @@ def check_same_polygon(
     """
     
     # check if the layers and datatype are the same
-    if polyA.layers[0] != polyB.layers[0]:
+    if polyA.layer != polyB.layer:
         return False
-    layer = polyA.layers[0]
-    if polyA.datatypes[0] != polyB.datatypes[0]:
+    layer = polyA.layer
+    if polyA.datatype != polyB.datatype:
         return False
-    datatype = polyA.datatypes[0]
+    datatype = polyA.datatype
     # check if the interception of the two polygons is equal to both of them, or
-    # if the not operation (polyA - polyB) is equal to an empty space of points/polygons
-    return len(boolean(polyA, polyB, "not", layer, datatype, maxPoints, precision).polygons) == 0
- 
+    # if the not operation (polyA - polyB) and (polyB - polyA) is equal to an empty space of points/polygons
+    notAB = boolean( polyA, polyB, "not" )
+    notBA = boolean( polyB, polyA, "not" )
+    return len(notAB) == 0 and len(notBA) == 0
 
 def check_polygon_contains_polygon(
     polyA,
     polyB,
-    maxPoints = 199,
-    precision = 1e-3,
 ) -> bool:
     """_summary_
     Checks if polygon A contains polygon B
@@ -161,22 +268,22 @@ def check_polygon_contains_polygon(
         bool: returns wether polygon A contains polygon B or not
                 True : polygon A contains polygon B; False: polygon A doesn't contain polygon B
     """
-    # check if the received polygons are valid
-    if type(polyA) != Polygon and type(polyA) != PolygonSet and type(polyA) != Rectangle and type(polyA) != Path:
-        raise TypeError("polyA must be a PolygonSet, Polygon, Rectangle or Path object!")
-    if type(polyB) != Polygon and type(polyB) != PolygonSet and type(polyB) != Rectangle and type(polyB) != Path:
-        raise TypeError("polyB must be a PolygonSet, Polygon, Rectangle or Path object!")
     # check if the layers and datatype are the same
-    if polyA.layers[0] != polyB.layers[0]:
+    if polyA.layer != polyB.layer:
         return False
-    layer = polyA.layers[0]
-    if polyA.datatypes[0] != polyB.datatypes[0]:
+    if polyA.datatype != polyB.datatype:
         return False
-    datatype = polyA.datatypes[0]
     # if the union of the two polygons is equal to the polygon A, then polygon A contains polygon B
     # which is equal to checking if : (polyA U polyB) NOT polyA == 0
-    unionAB = boolean(polyA, polyB, "or", layer, datatype, maxPoints, precision)
-    return  check_same_polygon(unionAB, polyA, maxPoints, precision) or check_same_polygon(polyA, polyB, maxPoints, precision)
+    unionAB = boolean(
+        polyA, 
+        polyB, 
+        "or",
+        layer = polyA.layer,
+        datatype = polyA.datatype
+    )
+    boolMap = [check_same_polygon(uniAB, polyA) for uniAB in unionAB]
+    return (False not in boolMap) or check_same_polygon(polyA, polyB)
     
 def find_centroid(
     poly: np.array,
@@ -211,8 +318,6 @@ def find_centroid(
     cent[1] = cent[1]/ (6.0*signedArea)
     return cent
 
-# ? Testing wrapper for the private function find_centroid
-wrapperfind_centroid = find_centroid
 
 def unit_vec(
     pointA: list,
@@ -228,8 +333,7 @@ def unit_vec(
     vec: list = [pointB[0] - pointA[0], pointB[1] - pointA[1]]
     return [ vec[0]/np.linalg.norm(vec), vec[1]/np.linalg.norm(vec) ]
 
-# ? Testing wrapper for the private function unit_vec
-wrapperunit_vec = unit_vec
+
 
 def saturate_vector(
     vec: list
@@ -244,8 +348,7 @@ def saturate_vector(
     vx = 1 if vec[0] >= 0.5 else (-1 if vec[0] < -0.5 else 0)
     vy = 1 if vec[1] >= 0.5 else (-1 if vec[1] < -0.5 else 0)
     return [vx, vy]
-# ? Testing wrapper for the private function saturate_vector
-wrappersaturate_vector = saturate_vector
+
 
 def check_neighbour_direction(
     poly: np.array,
@@ -293,8 +396,7 @@ def check_neighbour_direction(
         return PolygonDirection.SOUTH_WEST
     else: 
         return None
-# ? Testing wrapper for the private function check_neighbour_direction
-wrappercheck_neighbour_direction = check_neighbour_direction
+
 
 def get_direction_between_rects(
     poly: np.array,
@@ -309,7 +411,7 @@ def get_direction_between_rects(
         PolygonDirection: direction between the rectangles
     """
     if len(poly) != 4 or len(neighbour) != 4:
-        raise ValueError("Rectangles must have 4 vertices only!")
+        raise ValueError("rectangles must have 4 vertices only!")
     # get the 8-side direction between the two rectangles
     direction = check_neighbour_direction(poly, neighbour)
     # check which side (horizontal or vertical) is the bigger
@@ -333,27 +435,26 @@ def get_direction_between_rects(
         else:
             pass # proceed
     return retDir
-# ? Testing wrapper for the private function get_direction_between_rects
-wrapperget_direction_between_rects = get_direction_between_rects
+
 
 def fragment_polygon(
-    poly: PolygonSet,
+    poly: Polygon,
     maxPoints = 199,
     precision = 1e-3,
-) -> PolygonSet:
+) -> Polygon:
     """_summary_
-    Fragments the polygon into a PolygonSet object
+    #! Deprecated
+    Fragments the polygon into a Polygon object
     Args:
         poly        (Polygon)   : the polygon to fragment
         maxPoints   (int)       : the maximum number of points to keep
         precision   (float)     : the precision to use
     Returns:
-        PolygonSet: the polygon set resulting from the fragmentation operation
+        Polygon: the polygon set resulting from the fragmentation operation
     """
-    return poly.fracture(max_points = maxPoints, precision = precision)
-    
-# ? Testing wrapper for the private function fragment_polygon
-wrapperfragment_polygon = fragment_polygon
+    raise DeprecationWarning("This function is deprecated!")
+    #return poly.fracture(max_points = maxPoints, precision = precision)
+
 
 def fragment_net(
     name: str,
@@ -362,7 +463,7 @@ def fragment_net(
     precision = 1e-3,
 ) -> Cell:
     """_summary_
-    Fragments the net into a Cell of PolygonSet
+    Fragments the net into a Cell of Polygon
     objects resulting from horizontal and vertical
     cuts in each polygon, and returns it
     Args:
@@ -430,8 +531,8 @@ def check_polygon_in_cell(
         bool: _description_
     """
     # check if the received polygons are valid
-    if type(polygon) != Polygon and type(polygon) != PolygonSet and type(polygon) != Rectangle and type(polygon) != Path:
-        raise TypeError("polyA must be a PolygonSet, Polygon, Rectangle or Path object!")
+    if type(polygon) != Polygon and type(polygon) != Polygon and type(polygon) != rectangle and type(polygon) != RobustPath:
+        raise TypeError("polyA must be a Polygon, Polygon, rectangle or RobustPath object!")
     layer = polygon.layers[0]
     datatype = polygon.datatypes[0]
     for other in get_polygons_by_spec(cell, layer, datatype):
@@ -448,9 +549,9 @@ def check_via_connection(
     Checks if the polygon A and B are connected through
     the specified via
     Args:
-        polyA   (PolygonSet): polygon in metal layer above
-        via     (PolygonSet): polygon in metal layer between
-        polyB   (PolygonSet): polygon in metal layer below
+        polyA   (Polygon): polygon in metal layer above
+        via     (Polygon): polygon in metal layer between
+        polyB   (Polygon): polygon in metal layer below
     Returns:
         bool: True if the polygons are connected through the via
                 False otherwise
@@ -460,12 +561,12 @@ def check_via_connection(
         # ! result will not mean anything
     """
     # check if the received polygons are valid
-    if type(polyA) != Polygon and type(polyA) != PolygonSet and type(polyA) != Rectangle and type(polyA) != Path:
-        raise TypeError("polyA must be a PolygonSet, Polygon, Rectangle or Path object!")
-    if type(polyB) != Polygon and type(polyB) != PolygonSet and type(polyB) != Rectangle and type(polyB) != Path:
-        raise TypeError("polyB must be a PolygonSet, Polygon, Rectangle or Path object!")
-    if type(via) != Polygon and type(via) != PolygonSet and type(via) != Rectangle and type(via) != Path:
-        raise TypeError("via must be a PolygonSet, Polygon, Rectangle or Path object!")
+    if type(polyA) != Polygon and type(polyA) != Polygon and type(polyA) != rectangle and type(polyA) != RobustPath:
+        raise TypeError("polyA must be a Polygon, Polygon, rectangle or RobustPath object!")
+    if type(polyB) != Polygon and type(polyB) != Polygon and type(polyB) != rectangle and type(polyB) != RobustPath:
+        raise TypeError("polyB must be a Polygon, Polygon, rectangle or RobustPath object!")
+    if type(via) != Polygon and type(via) != Polygon and type(via) != rectangle and type(via) != RobustPath:
+        raise TypeError("via must be a Polygon, Polygon, rectangle or RobustPath object!")
     # check if the polygons are the same in pairs
     if check_same_polygon(polyA, polyB):
         return False
@@ -501,10 +602,9 @@ def join_overlapping_polygons_cell(
     """
     newCell = Cell(cell.name+"_joined", exclude_from_current = True)
     polygons = cell.get_polygons(by_spec = list(layerMap.values()))
-    metalIds = list(polygons.keys())
-    for layer, datatype in metalIds:
+    for layer, datatype in polygons.keys():
         poly = boolean( polygons[(layer, datatype)], polygons[(layer, datatype)], 'or', layer = layer, datatype = datatype )
-        poly = PolygonSet( poly ,layer = layer, datatype = datatype )
+        poly = Polygon( poly ,layer = layer, datatype = datatype )
         newCell.add(poly)
     return newCell
 
@@ -547,22 +647,22 @@ def fuse_overlapping_cells(
 
 def select_abstraction_depth(
     name: str,
-    lib : GdsLibrary,
+    lib : Library,
     depth: int = 0,
     select: dict = {}
-) -> GdsLibrary:
+) -> Library:
     """_summary_
     Extracts the selected layers of the 
     cells of the library at a given 
-    abstraction depth, and returns a new GdsLibrary
+    abstraction depth, and returns a new Library
     Args:
         name   (str)        : name of the returning library
-        lib    (GdsLibrary) : GdsLibrary object to be extracted from
+        lib    (Library) : Library object to be extracted from
         depth  (int)        : abstraction depth
         select (dict)       : dictionary of selected (layer, datatype) tuples
     """
     # create a new library
-    newLib = GdsLibrary(name)
+    newLib = Library(name)
     for cell in lib:
         # create a new cell
         newCell = Cell(cell.name, exclude_from_current = True)

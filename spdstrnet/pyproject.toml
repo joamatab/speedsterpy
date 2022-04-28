@@ -8,11 +8,17 @@ authors = ["dasdias <das.dias6@gmail.com>"]
 python = "^3.9"
 numpy = "^1.22.3"
 loguru = "^0.6.0"
-gdstk = "^0.8.2"
+gdstk = "^0.8.2" # to import the faster operations
+gdspy = "^1.6.11" # to import the viewer
 
+# local:
+spdstrutil = {path = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrutil"}
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[packages]
+include = "**/*.py"

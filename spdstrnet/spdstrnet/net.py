@@ -3,16 +3,9 @@ from loguru import logger
 from enum import Enum
 import numpy as np
 from gdstk import(
-    GdsLibrary,
+    Library,
     Cell,
-    PolygonSet,
-    Path,
-    Text,  # to provide a text annotation system
-    Label, # to provide label knowledge
-    # functions
-    boolean, # perform boolean operations on two polygon sets
-    inside, # check if a point is inside a polygon
-    copy, # create and return a copy of a polygon set
+    Polygon,
 )
 from .geometry import(
     bool_polygon_overlap_check,
@@ -44,7 +37,7 @@ def _recursive_net_search(
     Recursively searches for the polygons of the metal alyer above
     that intercept the vias polygons parsed as input
     Args:
-        previousViasPolygon (PolygonSet): vias polygons of the layer below
+        previousViasPolygon (Polygon): vias polygons of the layer below
         polyDict            (dict)      : dictionary of {(layer, datatype): [polygons]} tuples
         layerIndex          (int)       : polyDict keys list index of the current vias polygons (layer, datatype) tuple        
         net                 (gdspy.Cell): gdspy.Cell object containing the net that is being extracted 
@@ -86,7 +79,7 @@ def _reverse_recursive_net_search(
     Recursively searches for the polygons of the metal layer below
     that intercept the vias polygons parsed as input 
     Args:
-        previousViasPolygon (PolygonSet): vias polygons of the layer above
+        previousViasPolygon (Polygon): vias polygons of the layer above
         polyDict            (dict)      : dictionary of {(layer, datatype): [polygons]} tuples
         layerIndex          (int)       : polyDict keys list index of the current vias polygons (layer, datatype) tuple        
         net                 (gdspy.Cell): gdspy.Cell object containing the net that is being extracted 
@@ -133,7 +126,7 @@ def _net_connection_search(
         polygonLayerIndex (int)         : index of the layer where the current polygon is situated
         viaIndex          (int)         : index of the vias layer through which the connection happens
         metalLayerIndex   (int)         : index of the metal layer where the search for connections is performed
-        currentPolygon    (PolygonSet)  : current polygon from which the connection is beggining in
+        currentPolygon    (Polygon)  : current polygon from which the connection is beggining in
         polyDict          (dict)        : dictionary of {(layer, datatype): [polygons]} tuples
         net               (Cell)        : gdspy.Cell object containing the net that is being extracted
     """
@@ -163,17 +156,17 @@ def _net_connection_search(
 def _total_unlabeled_net_extract(
     layout: Cell,
     gdsTable: GdsTable,
-) -> GdsLibrary:
+) -> Library:
     """_summary_
     Extracts all the metal nets from a layout Cell object by performing
     multiple polygon boolean operations,
-    returning a GdsLibrary with the extracted nets
+    returning a Library with the extracted nets
     Args:
         layout      (Cell)          : Cell object containing the layout
-        nets        (GdsLibrary)    : GdsLibrary object to which the extracted nets will be added
+        nets        (Library)    : Library object to which the extracted nets will be added
         gdsTable    (GdsTable)      : GdsTable object containing the gds information
     Returns:
-        GdsLibrary : GdsLibrary object containing the extracted nets
+        Library : Library object containing the extracted nets
     """
     logger.info("Extracting metal nets through geometry processing...")
     netId = 0
@@ -213,9 +206,8 @@ def _total_unlabeled_net_extract(
         )
         # add the net to the list of nets
         nets.append(newNet)
-    
-    # create a GdsLibrary object to store the extracted nets
-    netsLib = GdsLibrary("nets")
+    # create a Library object to store the extracted nets
+    netsLib = Library("nets")
     # Join the nets that have at least one polygon in common, creating a new net
     # !TROUBLE IN THIS SNIPPET ************
     def mapFunc(netA, netB):
@@ -228,9 +220,9 @@ def _total_unlabeled_net_extract(
     length = len(fusedNets)
     prevLength = 0
     while length != prevLength:
-        fusedNets = list(map(mapFunc, nets, fusedNets))
-        prevLength = length
-        length = len(fusedNets)
+        fusedNets   = list(map(mapFunc, nets, fusedNets))
+        prevLength  = length
+        length      = len(fusedNets)
     # ! TROUBLE IN THIS SNIPPET ***********  
     # normalize the fused nets
     def _normalize_nets(
@@ -262,7 +254,7 @@ def _unlabeled_net_extraction(
     to which the entry polygon belongs to from the layout
     without recurring to the labelling of each polygon.
     Args:
-        entryPolygon (PolygonSet) : polygon from which the extraction is started
+        entryPolygon (Polygon) : polygon from which the extraction is started
         layout       (Cell)       : Cell object containing the layout
         gdsTable     (GdsTable)   : GdsTable object containing the gds information
     Returns:
@@ -314,13 +306,13 @@ def _labeled_net_extract(
     """_summary_
     Tries to extracts a metal net from a Cell object by 
     detecting the labels of each polygon,
-    returning a GdsLibrary with the extracted nets.
+    returning a Library with the extracted nets.
     If the labels mean nothing, tries to extract using 
     _extract_nets_through_intersect function
     Args:
         layout (Cell) : Cell object containing the layout
     Returns:
-        GdsLibrary : GdsLibrary object containing the extracted nets
+        Library : Library object containing the extracted nets
     """
     net = Cell(netName, exclude_from_current=True)
     for poly in itertools.chain(layout.get_polygonsets(), layout.get_paths()):
@@ -333,7 +325,7 @@ def _labeled_net_extract(
 def net_extract(
     entryPolygon,
     layout: Cell,
-    nets: GdsLibrary,
+    nets: Library,
     gdsTable: GdsTable,
 ) -> Cell :
     """_summary_
@@ -342,7 +334,7 @@ def net_extract(
     Args:
         entryPolygon (_type_): _description_
         layout (Cell): _description_
-        nets (GdsLibrary): _description_
+        nets (Library): _description_
         gdsTable (GdsTable): _description_
     Returns:
         Cell: extracted net
@@ -371,7 +363,7 @@ def highlight_net(
     # get the layer and datatype of the highlighting layer
     highlightLayer,highlightDatatype = gdsTable.getGdsLayerDatatypeFromLayerNamePurpose("highlight", GdsLayerPurpose.HIGHLIGHTING)[0]
     # copy the polygon into the layout
-    layout.add(PolygonSet(polys, layer=highlightLayer, datatype=highlightDatatype))
+    layout.add(Polygon(polys, layer=highlightLayer, datatype=highlightDatatype))
     return layout
 
 def delete_highlighted_net(
