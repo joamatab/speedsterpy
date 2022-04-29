@@ -6,7 +6,8 @@ from .data import *
 from .read import *
 from .write import *
 
-def getParent(path, levels = 1):
+
+def getParent(path, levels=1):
     """_summary_
     Get the parent directory of a path
     according to the specified level of
@@ -16,9 +17,10 @@ def getParent(path, levels = 1):
         levels  (int)   : number of levels to go up in the tree
     """
     common = path
-    for _ in range(levels+1):
+    for _ in range(levels + 1):
         common = os.path.dirname(os.path.abspath(common))
     return common
+
 
 class SelectedOp(Enum):
     """_summary_
@@ -30,11 +32,13 @@ class SelectedOp(Enum):
         SHOW   : show a workspace
         LIST   : list all workspaces
     """
+
     None
-    CREATE  = 1
-    DELETE  = 2
-    SHOW    = 3
-    LIST    = 4
+    CREATE = 1
+    DELETE = 2
+    SHOW = 3
+    LIST = 4
+
 
 def handleMutuallyExclusive(argv: Namespace) -> list:
     """_summary_
@@ -47,9 +51,19 @@ def handleMutuallyExclusive(argv: Namespace) -> list:
                                 argparse subparser
     """
     ret = []
-    if (argv.s or argv.d or argv.l) and \
-        ( argv.c or argv.tab or argv.tlef or argv.lef or argv.gds or argv.tb or argv.o or argv.net):
-        raise ValueError("Show, List and Delete operations are mutually exclusive with other operations")
+    if (argv.s or argv.d or argv.l) and (
+        argv.c
+        or argv.tab
+        or argv.tlef
+        or argv.lef
+        or argv.gds
+        or argv.tb
+        or argv.o
+        or argv.net
+    ):
+        raise ValueError(
+            "Show, List and Delete operations are mutually exclusive with other operations"
+        )
     if argv.c:
         ret.append(SelectedOp.CREATE)
     if argv.s:
@@ -59,7 +73,8 @@ def handleMutuallyExclusive(argv: Namespace) -> list:
     if argv.l:
         ret.append(SelectedOp.LIST)
     return ret
-    
+
+
 def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     """_summary_
     handler for the creation of a new workspace
@@ -91,11 +106,11 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     lefFilePath = argv.lef[0]
     # after collecting all the values, create the workspace
     args = {
-        "name"                  : workspaceName,
-        "workspacePath"         : workspaceDir,
-        "techPath"              : techFilePath,
-        "layoutPath"            : layoutFilePath,
-        "portsPath"             : lefFilePath,
+        "name": workspaceName,
+        "workspacePath": workspaceDir,
+        "techPath": techFilePath,
+        "layoutPath": layoutFilePath,
+        "portsPath": lefFilePath,
     }
     newWorkspace = SpdstrWorkspace(selfDict=args)
     if netlistFilePath:
@@ -105,12 +120,12 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
         newWorkspace.saveTestbenchDir(testbenchDir)
     else:
         # if no testbench directory was provided,
-        newWorkspace.createTestbench() # create a default testbench
-        newWorkspace.createTestbenchCfgFile() # create a default testbench configuration file
+        newWorkspace.createTestbench()  # create a default testbench
+        newWorkspace.createTestbenchCfgFile()  # create a default testbench configuration file
     if outputDir:
         newWorkspace.saveTestbenchOutput(outputDir)
-    else: # if no output directory was provided,
-        newWorkspace.createTestbenchOutputDir() # create a default testbench output directory
+    else:  # if no output directory was provided,
+        newWorkspace.createTestbenchOutputDir()  # create a default testbench output directory
 
     if tableFilePath:
         newWorkspace.saveGdsTableFile(tableFilePath)
@@ -121,6 +136,7 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     lib.add(newWorkspace, overWrite=True)
     logger.info(f'Workspace "{workspaceName}" created successfully')
     return newWorkspace
+
 
 def handleDeletion(argv: Namespace, lib: SpdstrWorkspaceLib) -> SpdstrWorkspace:
     """_summary_
@@ -134,15 +150,16 @@ def handleDeletion(argv: Namespace, lib: SpdstrWorkspaceLib) -> SpdstrWorkspace:
     if not argv.d:
         raise ValueError("No workspace name provided")
     workspaceName = argv.d[0]
-    #fetch the workspace from the library
+    # fetch the workspace from the library
     workspace = read(lib[workspaceName]["fullpath"])
     # erase the workspace from the library
     lib.remove(workspaceName)
-    #return the deleted workspace
+    # return the deleted workspace
     logger.info(f'Workspace "{workspaceName}" deleted successfully')
     return workspace
 
-def handleShow(argv: Namespace, lib : SpdstrWorkspaceLib) -> None:
+
+def handleShow(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     """_summary_
     handler for the show of a workspace
     Args:
@@ -154,10 +171,11 @@ def handleShow(argv: Namespace, lib : SpdstrWorkspaceLib) -> None:
     if not argv.s:
         raise ValueError("No workspace name provided")
     workspaceName = argv.s[0]
-    #fetch the workspace from the library
+    # fetch the workspace from the library
     workspace = read(lib[workspaceName]["fullpath"])
-    #print the workspace
+    # print the workspace
     logger.info("\n{}".format(str(workspace)))
+
 
 def handleList(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     """_summary_

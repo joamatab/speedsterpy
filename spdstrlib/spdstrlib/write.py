@@ -5,12 +5,13 @@ import pickle
 import json
 from .data import *
 
+
 def dump(lib: SpdstrWorkspaceLib) -> None:
     """
     Saves the workspace library (saved in .bin (binary) format)
     """
     workspaceLibPath = lib.getWorkspaceLibPath()
-    #logger.info("Saving workspace library...")
+    # logger.info("Saving workspace library...")
     # if the workspace library path does not exist, create it
     """
     if not os.path.exists(workspaceLibPath):
@@ -21,8 +22,8 @@ def dump(lib: SpdstrWorkspaceLib) -> None:
             pickle.dump(lib, f)
     except Exception as e:
         raise e
-    #logger.info("Success saving workspace library")
-    
+    # logger.info("Success saving workspace library")
+
 
 def write(project: SpdstrWorkspace):
     """_summary_

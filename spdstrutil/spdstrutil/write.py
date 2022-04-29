@@ -9,9 +9,10 @@ program memory
 """
 import yaml
 import os
-from .data import(
+from .data import (
     GdsTable,
 )
+
 
 def writeGdsTable(tab: GdsTable, filePath: str) -> None:
     path = os.path.abspath(filePath)

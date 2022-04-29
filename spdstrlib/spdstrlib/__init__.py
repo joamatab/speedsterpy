@@ -1,4 +1,4 @@
-__version__ = '0.1.33'
+__version__ = "0.1.33"
 __description__ = "Speedster project library management tool."
 __date__ = "2022-04-12"
 __author__ = "Diogo André Silvares Dias"
@@ -9,35 +9,32 @@ import sys
 from loguru import logger
 import pickle
 import os
-from .read import (
-    load,
-    read
-)
-from .write import(
-    dump,
-    write
-)
+from .read import load, read
+from .write import dump, write
 from .util import *
 from .data import *
 
-#create the global workspace lib path save
+# create the global workspace lib path save
 __workspace_lib_path__ = f"{getParent(os.getcwd(), 0)}/wslib"
-#__workspace_lib_path__ = "{}/wslib".format(getParent(os.getcwd(),1))
+# __workspace_lib_path__ = "{}/wslib".format(getParent(os.getcwd(),1))
 if not os.path.exists(__workspace_lib_path__):
     os.makedirs(__workspace_lib_path__)
 __workspace_filename__ = "wslib.bin"
+
 
 def verboseInfo():
     print(f"Version      : {__version__} ({__date__})")
     print(f"Authors      : {__author__}")
     print(f"Description  : {__description__}")
 
+
 __arg_to_func__ = {
-    SelectedOp.CREATE   : handleCreation,
-    SelectedOp.DELETE   : handleDeletion,
-    SelectedOp.SHOW     : handleShow,
-    SelectedOp.LIST     : handleList,
+    SelectedOp.CREATE: handleCreation,
+    SelectedOp.DELETE: handleDeletion,
+    SelectedOp.SHOW: handleShow,
+    SelectedOp.LIST: handleList,
 }
+
 
 def run(subparser, *args, **kwargs) -> None:
     logger.info("Speedster$\nLibrary Manager : {}".format(__file__))
@@ -59,13 +56,12 @@ def run(subparser, *args, **kwargs) -> None:
         logger.info("Workspace library not found. Creating a new one.")
         # create new library on default path
         lib = SpdstrWorkspaceLib(
-            libPath= __workspace_lib_path__,
-            fileName= __workspace_filename__
+            libPath=__workspace_lib_path__, fileName=__workspace_filename__
         )
         # dump the library on the standard path
         dump(lib)
 
-    #handle mutually exclusive arguments
+    # handle mutually exclusive arguments
     try:
         args = handleMutuallyExclusive(argv)
         for arg in args:
@@ -74,4 +70,3 @@ def run(subparser, *args, **kwargs) -> None:
         logger.error(f"{e.__class__.__name__} - {e}")
     # dump the library on the standard path
     dump(lib)
-    

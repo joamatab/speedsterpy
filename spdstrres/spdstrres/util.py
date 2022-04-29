@@ -9,6 +9,8 @@ from spdstrlib import (
     SpdstrWorkspaceLib,
     SpdstrWorkspace,
 )
+
+
 def handleMutuallyExclusive(argv: Namespace) -> None:
     """_summary_
     handler for the mutually exclusive options
@@ -21,10 +23,13 @@ def handleMutuallyExclusive(argv: Namespace) -> None:
     """
     if not argv.ws:
         raise ValueError("Workspace name must be provided.")
-    if not( argv.ptp and argv.v ):
-        raise ValueError("Visualization is only possible to occur after performing point-to-point resistance extraction (PTP).")
+    if not (argv.ptp and argv.v):
+        raise ValueError(
+            "Visualization is only possible to occur after performing point-to-point resistance extraction (PTP)."
+        )
 
-def handleResistanceExtraction(argv : Namespace) -> None:
+
+def handleResistanceExtraction(argv: Namespace) -> None:
     """_summary_
     Handler for the extraction of parasitic resistace
     extraction
@@ -50,4 +55,3 @@ def handleResistanceExtraction(argv : Namespace) -> None:
     workspaceJsonPath = lib[workspaceName]["fullpath"]
     workspace = read(workspaceJsonPath)
     # parse the workspace to resistance extraction brigding function, along with the remaining options
-    

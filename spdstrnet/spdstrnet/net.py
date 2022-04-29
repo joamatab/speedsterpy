@@ -2,12 +2,12 @@ import itertools
 from loguru import logger
 from enum import Enum
 import numpy as np
-from gdstk import(
+from gdstk import (
     Library,
     Cell,
     Polygon,
 )
-from .geometry import(
+from .geometry import (
     bool_polygon_overlap_check,
     check_polygon_in_cell,
     check_polygon_overlap,
@@ -17,7 +17,7 @@ from .geometry import(
     check_polygon_contains_polygon,
     fuse_overlapping_cells,
 )
-from .data import(
+from .data import (
     SpeedsterPort,
 )
 from spdstrutil import (
@@ -25,6 +25,7 @@ from spdstrutil import (
     GdsLayerPurpose,
     timer,
 )
+
 
 def _recursive_net_search(
     previousViasPolygon,
@@ -39,20 +40,20 @@ def _recursive_net_search(
     Args:
         previousViasPolygon (Polygon): vias polygons of the layer below
         polyDict            (dict)      : dictionary of {(layer, datatype): [polygons]} tuples
-        layerIndex          (int)       : polyDict keys list index of the current vias polygons (layer, datatype) tuple        
-        net                 (gdspy.Cell): gdspy.Cell object containing the net that is being extracted 
+        layerIndex          (int)       : polyDict keys list index of the current vias polygons (layer, datatype) tuple
+        net                 (gdspy.Cell): gdspy.Cell object containing the net that is being extracted
 
     Returns:
-    
+
     """
     layerDatatypeList = list(polyDict.keys())
     if layerIndex >= len(layerDatatypeList):
-        return # reached the highest layer, the search is over
-    layer,datatype = layerDatatypeList[layerIndex]
+        return  # reached the highest layer, the search is over
+    layer, datatype = layerDatatypeList[layerIndex]
     # for each polygon of the m2 layer
-    #poly_id = 0
+    # poly_id = 0
     for polyset in list(polyDict[(layer, datatype)]):
-        #print(f'Poly Layer : {lindex} Poly id : {poly_id}')
+        # print(f'Poly Layer : {lindex} Poly id : {poly_id}')
         # if the m2m1 vias polys that intersept the M1 layer intersept the m2 layer as well, add the poly to the netlist
         if bool_polygon_overlap_check(polyset, previousViasPolygon):
             if not check_polygon_in_cell(polyset, net):
@@ -62,39 +63,51 @@ def _recursive_net_search(
             if auxLayerIndex < len(layerDatatypeList):
                 viaLayer, viaDatatype = layerDatatypeList[auxLayerIndex]
                 # get intercepting vias above the current layer
-                if bool_polygon_overlap_check(polyset, polyDict[(viaLayer,viaDatatype)]): # if there are intersepting vias
-                    nextViasPolygons = check_polygon_overlap(polyset, polyDict[(viaLayer,viaDatatype)], viaLayer, viaDatatype)
+                if bool_polygon_overlap_check(
+                    polyset, polyDict[(viaLayer, viaDatatype)]
+                ):  # if there are intersepting vias
+                    nextViasPolygons = check_polygon_overlap(
+                        polyset,
+                        polyDict[(viaLayer, viaDatatype)],
+                        viaLayer,
+                        viaDatatype,
+                    )
                     if not check_polygon_in_cell(polyset, net):
-                        net.add(nextViasPolygons) # add the vias polygons to the netlist
-                    _recursive_net_search(nextViasPolygons, polyDict, auxLayerIndex+1, net)
+                        net.add(
+                            nextViasPolygons
+                        )  # add the vias polygons to the netlist
+                    _recursive_net_search(
+                        nextViasPolygons, polyDict, auxLayerIndex + 1, net
+                    )
+
 
 def _reverse_recursive_net_search(
     previousViasPolygon,
     polyDict,
     layerIndex,
     net,
-) :
+):
     """_summary_
     (Descending order of metal layers)
     Recursively searches for the polygons of the metal layer below
-    that intercept the vias polygons parsed as input 
+    that intercept the vias polygons parsed as input
     Args:
         previousViasPolygon (Polygon): vias polygons of the layer above
         polyDict            (dict)      : dictionary of {(layer, datatype): [polygons]} tuples
-        layerIndex          (int)       : polyDict keys list index of the current vias polygons (layer, datatype) tuple        
-        net                 (gdspy.Cell): gdspy.Cell object containing the net that is being extracted 
+        layerIndex          (int)       : polyDict keys list index of the current vias polygons (layer, datatype) tuple
+        net                 (gdspy.Cell): gdspy.Cell object containing the net that is being extracted
 
     Returns:
-    
+
     """
     layerDatatypeList = list(polyDict.keys())
     if layerIndex < 0:
-        return # reached the lowest layer i nthe previous iteration, the search is over
-    layer,datatype = layerDatatypeList[layerIndex]
+        return  # reached the lowest layer i nthe previous iteration, the search is over
+    layer, datatype = layerDatatypeList[layerIndex]
     # for each polygon of the m2 layer
-    #poly_id = 0
+    # poly_id = 0
     for polyset in list(polyDict[(layer, datatype)]):
-        #print(f'Poly Layer : {lindex} Poly id : {poly_id}')
+        # print(f'Poly Layer : {lindex} Poly id : {poly_id}')
         # if the m2m1 vias polys that intersept the M1 layer intersept the m2 layer as well, add the poly to the netlist
         if bool_polygon_overlap_check(polyset, previousViasPolygon):
             if not check_polygon_in_cell(polyset, net):
@@ -104,18 +117,29 @@ def _reverse_recursive_net_search(
             if auxLayerIndex >= 0:
                 viaLayer, viaDatatype = layerDatatypeList[auxLayerIndex]
                 # get intercepting vias above the current layer
-                if bool_polygon_overlap_check(polyset, polyDict[(viaLayer,viaDatatype)]): # if there are intersepting vias
-                    nextViasPolygons = check_polygon_overlap(polyset, polyDict[(viaLayer,viaDatatype)], viaLayer, viaDatatype)
+                if bool_polygon_overlap_check(
+                    polyset, polyDict[(viaLayer, viaDatatype)]
+                ):  # if there are intersepting vias
+                    nextViasPolygons = check_polygon_overlap(
+                        polyset,
+                        polyDict[(viaLayer, viaDatatype)],
+                        viaLayer,
+                        viaDatatype,
+                    )
                     if not check_polygon_in_cell(polyset, nextViasPolygons):
-                        net.add(nextViasPolygons) # add the vias polygons to the netlist
-                    _recursive_net_search(nextViasPolygons, polyDict, auxLayerIndex-1, net)
+                        net.add(
+                            nextViasPolygons
+                        )  # add the vias polygons to the netlist
+                    _recursive_net_search(
+                        nextViasPolygons, polyDict, auxLayerIndex - 1, net
+                    )
 
 
 def _net_connection_search(
-    polygonLayerIndex: int, # layer where the current polygon is situated in
-    viaIndex: int,          # vias through which the connection happens
-    metalLayerIndex: int,   # layer where the search for connections is performed
-    currentPolygon,         # current polygon from which the connection is beggining in
+    polygonLayerIndex: int,  # layer where the current polygon is situated in
+    viaIndex: int,  # vias through which the connection happens
+    metalLayerIndex: int,  # layer where the search for connections is performed
+    currentPolygon,  # current polygon from which the connection is beggining in
     polyDict: dict,
     net: Cell,
 ):
@@ -140,17 +164,24 @@ def _net_connection_search(
         return
     # otherwise, continue the search
     viaLayer, viaDatatype = metalLayers[viaIndex][0], metalLayers[viaIndex][1]
-    vias = check_polygon_overlap(currentPolygon, polyDict[metalLayers[viaIndex]], viaLayer, viaDatatype)
+    vias = check_polygon_overlap(
+        currentPolygon, polyDict[metalLayers[viaIndex]], viaLayer, viaDatatype
+    )
     if not check_polygon_in_cell(vias, net):
-        vias.properties['net'] = net.name
+        vias.properties["net"] = net.name
         net.add(vias)
     for poly in polyDict[metalLayers[metalLayerIndex]]:
         if bool_polygon_overlap_check(poly, vias):
             if not check_polygon_in_cell(poly, net):
-                poly.properties['net'] = net.name
+                poly.properties["net"] = net.name
                 net.add(poly)
-            _net_connection_search(metalLayerIndex, viaIndex+2, metalLayerIndex+2, poly, polyDict, net)
-            _net_connection_search(metalLayerIndex, viaIndex-2, metalLayerIndex-2, poly, polyDict, net)
+            _net_connection_search(
+                metalLayerIndex, viaIndex + 2, metalLayerIndex + 2, poly, polyDict, net
+            )
+            _net_connection_search(
+                metalLayerIndex, viaIndex - 2, metalLayerIndex - 2, poly, polyDict, net
+            )
+
 
 @timer
 def _total_unlabeled_net_extract(
@@ -170,39 +201,41 @@ def _total_unlabeled_net_extract(
     """
     logger.info("Extracting metal nets through geometry processing...")
     netId = 0
-    nets = [] # temporary list to save the generated Cell nets
+    nets = []  # temporary list to save the generated Cell nets
     # layerMap starts in met1 layer, followed by a via, met, via ....
     layerMap = gdsTable.getDrawingMetalLayersMap()
-    # the number of metal layers selected for extraction 
+    # the number of metal layers selected for extraction
     # is either 1, 3, 5, 7 or 9
-    startingLayerIndex = startingLayerIndex = round(len(polyDict.keys())/2.0)-1 if len(polyDict.keys()) > 3 else 0
+    startingLayerIndex = startingLayerIndex = (
+        round(len(polyDict.keys()) / 2.0) - 1 if len(polyDict.keys()) > 3 else 0
+    )
     # obtain a layout of adjoint polygons
     unitedCell = join_overlapping_polygons_cell(layout, layerMap)
-    polyDict = get_polygon_dict(unitedCell,specs=layerMap.values())
-    #each of the polygons of the central routing metal layer will be a starting polygon
+    polyDict = get_polygon_dict(unitedCell, specs=layerMap.values())
+    # each of the polygons of the central routing metal layer will be a starting polygon
     # for the search
-    for poly in polyDict[ list(polyDict.keys())[startingLayerIndex] ]:
+    for poly in polyDict[list(polyDict.keys())[startingLayerIndex]]:
         # create a new net
-        newNet = Cell(f'net_{netId}', exclude_from_current=True)
+        newNet = Cell(f"net_{netId}", exclude_from_current=True)
         # add the starting polygon to the net
-        poly.properties['net'] = newNet.name
+        poly.properties["net"] = newNet.name
         newNet.add(poly)
         # search for the rest of the polygons that are connected to the starting polygon
         _net_connection_search(
-            startingLayerIndex, 
-            startingLayerIndex+1, 
-            startingLayerIndex+2, 
-            poly, 
+            startingLayerIndex,
+            startingLayerIndex + 1,
+            startingLayerIndex + 2,
+            poly,
             polyDict,
-            newNet
+            newNet,
         )
         _net_connection_search(
-            startingLayerIndex, 
-            startingLayerIndex-1, 
-            startingLayerIndex-2, 
-            poly, 
+            startingLayerIndex,
+            startingLayerIndex - 1,
+            startingLayerIndex - 2,
+            poly,
             polyDict,
-            newNet
+            newNet,
         )
         # add the net to the list of nets
         nets.append(newNet)
@@ -215,24 +248,23 @@ def _total_unlabeled_net_extract(
             fusion = fuse_overlapping_cells(netA, netB)
             if fusion is not None:
                 return fusion
+
     # run the fusion process until the number of fused nets together doesn't change anymore
     fusedNets = nets
     length = len(fusedNets)
     prevLength = 0
     while length != prevLength:
-        fusedNets   = list(map(mapFunc, nets, fusedNets))
-        prevLength  = length
-        length      = len(fusedNets)
-    # ! TROUBLE IN THIS SNIPPET ***********  
+        fusedNets = list(map(mapFunc, nets, fusedNets))
+        prevLength = length
+        length = len(fusedNets)
+    # ! TROUBLE IN THIS SNIPPET ***********
     # normalize the fused nets
-    def _normalize_nets(
-        net: Cell  
-    ) -> Cell:
-        """_summary_
-        """
+    def _normalize_nets(net: Cell) -> Cell:
+        """_summary_"""
         for poly in net.polygons:
-            poly.properties['net'] = net.name
+            poly.properties["net"] = net.name
         return net
+
     fusedNets = [_normalize_nets(net) for net in fusedNets]
     # finally, add the fused nets to the nets gds library
     [netsLib.add(net) for net in fusedNets]
@@ -247,8 +279,8 @@ def _unlabeled_net_extraction(
     entryPolygon,
     layout: Cell,
     gdsTable: GdsTable,
-    netName = "net",
-) -> Cell :
+    netName="net",
+) -> Cell:
     """_summary_
     Performs the automatic extraction of the net
     to which the entry polygon belongs to from the layout
@@ -266,48 +298,53 @@ def _unlabeled_net_extraction(
     # layerMap starts in met1 layer, followed by a via, met, via ....
     layerMap = gdsTable.getDrawingMetalLayersMap()
     if "via" in gdsTable[(entryLayer, entryDataType)]:
-        raise ValueError("Entry Polygon must be a routing metal polygon! It cannot be a via!")
-    
+        raise ValueError(
+            "Entry Polygon must be a routing metal polygon! It cannot be a via!"
+        )
+
     # obtain a layout of adjoint polygons
     unitedCell = join_overlapping_polygons_cell(layout, layerMap)
-    polyDict = get_polygon_dict(unitedCell,specs=layerMap.values())
+    polyDict = get_polygon_dict(unitedCell, specs=layerMap.values())
     unitedCellEntryPolygon = None
-    for poly in itertools.chain(unitedCell.get_polygonsets(), unitedCell.get_polygons()):
-        if check_polygon_contains_polygon(poly, entryPolygon) or check_polygon_contains_polygon(entryPolygon, poly):
+    for poly in itertools.chain(
+        unitedCell.get_polygonsets(), unitedCell.get_polygons()
+    ):
+        if check_polygon_contains_polygon(
+            poly, entryPolygon
+        ) or check_polygon_contains_polygon(entryPolygon, poly):
             unitedCellEntryPolygon = poly
-            poly.properties['net'] = netName
+            poly.properties["net"] = netName
             net.add(poly)
             break
     # starting from the entry polygon, perform a recursive search for the net
-    polygonLayerIndex = list(polyDict.keys()).index((entryLayer, entryDataType))    
+    polygonLayerIndex = list(polyDict.keys()).index((entryLayer, entryDataType))
     _net_connection_search(
-        polygonLayerIndex, 
-        polygonLayerIndex+1, 
-        polygonLayerIndex+2, 
-        unitedCellEntryPolygon, 
+        polygonLayerIndex,
+        polygonLayerIndex + 1,
+        polygonLayerIndex + 2,
+        unitedCellEntryPolygon,
         polyDict,
-        net
+        net,
     )
     _net_connection_search(
-        polygonLayerIndex, 
-        polygonLayerIndex-1, 
-        polygonLayerIndex-2, 
-        unitedCellEntryPolygon, 
-        polyDict, 
-        net
+        polygonLayerIndex,
+        polygonLayerIndex - 1,
+        polygonLayerIndex - 2,
+        unitedCellEntryPolygon,
+        polyDict,
+        net,
     )
     return net
 
+
 def _labeled_net_extract(
-    layout: Cell,
-    gdsTable: GdsTable,
-    netName: str = "net"
+    layout: Cell, gdsTable: GdsTable, netName: str = "net"
 ) -> Cell:
     """_summary_
-    Tries to extracts a metal net from a Cell object by 
+    Tries to extracts a metal net from a Cell object by
     detecting the labels of each polygon,
     returning a Library with the extracted nets.
-    If the labels mean nothing, tries to extract using 
+    If the labels mean nothing, tries to extract using
     _extract_nets_through_intersect function
     Args:
         layout (Cell) : Cell object containing the layout
@@ -321,13 +358,14 @@ def _labeled_net_extract(
             net.add(poly)
     return net
 
+
 @timer
 def net_extract(
     entryPolygon,
     layout: Cell,
     nets: Library,
     gdsTable: GdsTable,
-) -> Cell :
+) -> Cell:
     """_summary_
     Performs the selection between the labeled
     or unlabeled extraction of a net from the layout
@@ -340,7 +378,8 @@ def net_extract(
         Cell: extracted net
     """
     pass
-    #TODO ! implement the extraction of a net from a layout using either labeled or unlabeled extraction
+    # TODO ! implement the extraction of a net from a layout using either labeled or unlabeled extraction
+
 
 def highlight_net(
     layout: Cell,
@@ -358,13 +397,21 @@ def highlight_net(
     Returns:
         Cell: Created highlighted net
     """
-    #get the polygons of the extracted net
+    # get the polygons of the extracted net
     polys = net.get_polygons()
     # get the layer and datatype of the highlighting layer
-    highlightLayer,highlightDatatype = gdsTable.getGdsLayerDatatypeFromLayerNamePurpose("highlight", GdsLayerPurpose.HIGHLIGHTING)[0]
+    (
+        highlightLayer,
+        highlightDatatype,
+    ) = gdsTable.getGdsLayerDatatypeFromLayerNamePurpose(
+        "highlight", GdsLayerPurpose.HIGHLIGHTING
+    )[
+        0
+    ]
     # copy the polygon into the layout
     layout.add(Polygon(polys, layer=highlightLayer, datatype=highlightDatatype))
     return layout
+
 
 def delete_highlighted_net(
     layout: Cell,
@@ -380,11 +427,21 @@ def delete_highlighted_net(
         Cell: Modified layout
     """
     # get the layer and datatype of the highlighting layer
-    highlightLayer,highlightDatatype = gdsTable.getGdsLayerDatatypeFromLayerNamePurpose("highlight", GdsLayerPurpose.HIGHLIGHTING)[0]
+    (
+        highlightLayer,
+        highlightDatatype,
+    ) = gdsTable.getGdsLayerDatatypeFromLayerNamePurpose(
+        "highlight", GdsLayerPurpose.HIGHLIGHTING
+    )[
+        0
+    ]
+
     def test(poly, l, dt):
         return l == highlightLayer and dt == highlightDatatype
+
     layout = layout.remove_polygons(test)
     return layout
+
 
 def rename_net(
     prevNet: str,
@@ -400,5 +457,7 @@ def rename_net(
         layout  (Cell)  : Cell object containing the layout
     """
     for poly in layout.get_polygonsets():
-        poly.properties['net'] = net if poly.properties['net'] == prevNet else poly.properties['net']
+        poly.properties["net"] = (
+            net if poly.properties["net"] == prevNet else poly.properties["net"]
+        )
     return layout

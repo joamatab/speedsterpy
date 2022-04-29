@@ -12,31 +12,28 @@ lib = gdspy.GdsLibrary()
 # polygon overlapping
 # polygon inclusion (for polygon_contains)
 cell = lib.new_cell("test1")
-ld = {
-    "met1": {"layer":1, "datatype": 0},
-    "met2": {"layer":2, "datatype": 0}
-}
-polys = [gdspy.Rectangle((0.0,0.0), (3.0,1.0), **ld["met1"])]
-polys.append( gdspy.Rectangle( (2.0,0.0), (3.0, 3.0), **ld["met2"]) )
+ld = {"met1": {"layer": 1, "datatype": 0}, "met2": {"layer": 2, "datatype": 0}}
+polys = [gdspy.Rectangle((0.0, 0.0), (3.0, 1.0), **ld["met1"])]
+polys.append(gdspy.Rectangle((2.0, 0.0), (3.0, 3.0), **ld["met2"]))
 
-polys.append( gdspy.Rectangle( (2.0,0.0), (3.0, 3.0), **ld["met1"]) )
+polys.append(gdspy.Rectangle((2.0, 0.0), (3.0, 3.0), **ld["met1"]))
 
-polys.append( gdspy.Rectangle( (.2,.2), (.4, .4), **ld["met1"]) )
+polys.append(gdspy.Rectangle((0.2, 0.2), (0.4, 0.4), **ld["met1"]))
 
 # two equal and two different polygons to check if they are the same or not
-polys.append( gdspy.Rectangle((0.0,0.0),(3.0,1.0), **ld["met1"]) ) # equal to poly
+polys.append(gdspy.Rectangle((0.0, 0.0), (3.0, 1.0), **ld["met1"]))  # equal to poly
 
 # rectangle to find the centroid
-polys.append( gdspy.Rectangle((0.0,0.0),(1.0,1.0), **ld["met1"]) ) # equal to poly
+polys.append(gdspy.Rectangle((0.0, 0.0), (1.0, 1.0), **ld["met1"]))  # equal to poly
 
 # polygon and path united to fragment
 path = gdspy.Path(1.0, (0.0, 0.0))  # start of path at (0,0), with width of 1 dbu
 # build the path vertically, with a length of 4.0
-path.segment(4.0, "+y", layer = ld["met1"]["layer"], datatype = ld["met1"]["datatype"])
+path.segment(4.0, "+y", layer=ld["met1"]["layer"], datatype=ld["met1"]["datatype"])
 polys.append(path)
 
 for p in polys:
     cell.add(p)
 
 # observe the created polygons
-gdspy.LayoutViewer(lib, background = "#FFFFFF")
+gdspy.LayoutViewer(lib, background="#FFFFFF")

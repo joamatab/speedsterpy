@@ -1,35 +1,35 @@
 import os
+
+
 class SpdstrWorkspace(object):
     """_summary_
     A Speedster Project library object,
     to represent a user workspace
     """
+
     __slots__ = [
-        "name", 
-        "workspacePath", 
-        "techPath", 
+        "name",
+        "workspacePath",
+        "techPath",
         "layoutPath",
         "gdsTablePath",
-        "netlistPath", 
-        "portsPath", 
-        "testbenchPath", 
-        "testbenchOutputPath", 
-        "testbenchConfigPath"
+        "netlistPath",
+        "portsPath",
+        "testbenchPath",
+        "testbenchOutputPath",
+        "testbenchConfigPath",
     ]
-    def __init__(
-        self, 
-        name: str = "", 
-        selfDict: dict = None
-    ):
+
+    def __init__(self, name: str = "", selfDict: dict = None):
         """_summary_
         A class constructor supporting parsing capabilities
         Args:
             name            (str)               : workspace name
             workspacePath   (str, optional)     : workspace directory path. Defaults to "".
-            selfDict        (_type_, optional)  : dictionary representation of the workspace, 
+            selfDict        (_type_, optional)  : dictionary representation of the workspace,
                                                 obtained from json. Defaults to None.
         Raises:
-            ValueError: 
+            ValueError:
         """
         self.name = ""
         self.workspacePath = ""
@@ -41,14 +41,13 @@ class SpdstrWorkspace(object):
         self.testbenchPath = ""
         self.testbenchOutputPath = ""
         self.testbenchConfigPath = ""
-        if selfDict: # if there is a specified parsing dictionary
-            self.__parse(selfDict) # construct from it
+        if selfDict:  # if there is a specified parsing dictionary
+            self.__parse(selfDict)  # construct from it
         elif name:
             self.name = name
         else:
             raise ValueError("A project must have a name")
-            
-    
+
     def __parse(self, selfDict):
         """_summary_
         Constructs a SpdstrProject object from a dictionary
@@ -59,21 +58,27 @@ class SpdstrWorkspace(object):
         if selfDict["name"] == "":
             raise ValueError("A workspace must have a name")
         self.name = selfDict["name"]
-        self.saveWorkspaceDir( selfDict["workspacePath"] )
-        self.saveTechFile( selfDict["techPath"] )
-        self.saveLayoutFile( selfDict["layoutPath"] )
-        self.savePortsFile( selfDict["portsPath"] )
+        self.saveWorkspaceDir(selfDict["workspacePath"])
+        self.saveTechFile(selfDict["techPath"])
+        self.saveLayoutFile(selfDict["layoutPath"])
+        self.savePortsFile(selfDict["portsPath"])
         if "gdsTablePath" in selfDict.keys() and selfDict["gdsTablePath"] != "":
-            self.saveGdsTableFile( selfDict["gdsTablePath"] )
+            self.saveGdsTableFile(selfDict["gdsTablePath"])
         if "netlistPath" in selfDict.keys() and selfDict["netlistPath"] != "":
-            self.saveNetlistFile( selfDict["netlistPath"] )
+            self.saveNetlistFile(selfDict["netlistPath"])
         if "testbenchPath" in selfDict.keys() and selfDict["testbenchPath"] != "":
-            self.saveTestbenchDir( selfDict["testbenchPath"] )
-        if "testbenchOutputPath" in selfDict.keys() and selfDict["testbenchOutputPath"] != "":
-            self.saveTestbenchOutput( selfDict["testbenchOutputPath"] )
-    
+            self.saveTestbenchDir(selfDict["testbenchPath"])
+        if (
+            "testbenchOutputPath" in selfDict.keys()
+            and selfDict["testbenchOutputPath"] != ""
+        ):
+            self.saveTestbenchOutput(selfDict["testbenchOutputPath"])
+
     def __str__(self):
-        ret = "--------------------------------\n" + "Workspace Name              : {}\n".format(self.name)
+        ret = (
+            "--------------------------------\n"
+            + "Workspace Name              : {}\n".format(self.name)
+        )
 
         ret += "Parent Directory Path       : {}\n".format(self.workspacePath)
         ret += "Technology File Path        : {}\n".format(self.techPath)
@@ -89,7 +94,7 @@ class SpdstrWorkspace(object):
 
     def __repr__(self):
         return self.__str__()
-    
+
     def __dict__(self):
         """_summary_
         Return a dictionary representation of the project object
@@ -106,21 +111,21 @@ class SpdstrWorkspace(object):
             "portsPath": self.portsPath,
             "testbenchPath": self.testbenchPath,
             "testbenchOutputPath": self.testbenchOutputPath,
-            "testbenchConfigPath": self.testbenchConfigPath
+            "testbenchConfigPath": self.testbenchConfigPath,
         }
-        
+
     def __iter__(self):
         return iter(self.__dict__())
-    
+
     def saveWorkspaceDir(self, workspacePath):
         path = os.path.abspath(workspacePath)
         if not os.path.isdir(path):
             raise ValueError(f"The {path} directory does not exist")
         self.workspacePath = path
-    
+
     def saveTechFile(self, techPath):
         path = os.path.abspath(techPath)
-        #check file extension to see if it matches the accepted file extension
+        # check file extension to see if it matches the accepted file extension
         _, tail = os.path.split(path)
         filename, extension = os.path.splitext(tail)
         if not os.path.isfile(path):
@@ -128,17 +133,17 @@ class SpdstrWorkspace(object):
         if extension not in [".tlef", ".lef"]:
             raise ValueError(f"The {filename} file's extension must be .tlef or .lef")
         self.techPath = path
-    
+
     def saveLayoutFile(self, layoutPath):
         path = os.path.abspath(layoutPath)
         _, tail = os.path.split(path)
         filename, extension = os.path.splitext(tail)
         if not os.path.isfile(path):
             raise ValueError(f"The {tail} file does not exist")
-        if extension != ".gds": #or extension != ".oasis": NOT IMPLEMENTED YET!
+        if extension != ".gds":  # or extension != ".oasis": NOT IMPLEMENTED YET!
             raise ValueError(f"The {filename} file's extension must be .gds")
         self.layoutPath = path
-    
+
     def saveGdsTableFile(self, gdsTablePath):
         path = os.path.abspath(gdsTablePath)
         _, tail = os.path.split(path)
@@ -148,7 +153,7 @@ class SpdstrWorkspace(object):
         if extension != ".csv":
             raise ValueError(f"The {filename} file's extension must be .csv")
         self.gdsTablePath = path
-    
+
     def saveNetlistFile(self, netlistPath):
         path = os.path.abspath(netlistPath)
         _, tail = os.path.split(path)
@@ -158,7 +163,7 @@ class SpdstrWorkspace(object):
         if extension not in [".net", ".cir"]:
             raise ValueError(f"The {filename} file's extension must be .net or .cir")
         self.netlistPath = path
-    
+
     def savePortsFile(self, portsPath):
         path = os.path.abspath(portsPath)
         _, tail = os.path.split(path)
@@ -168,25 +173,25 @@ class SpdstrWorkspace(object):
         if extension != ".lef":
             raise ValueError(f"The {filename} file's extension must be .lef")
         self.portsPath = path
-    
+
     def saveTestbenchDir(self, testbenchPath):
         path = os.path.abspath(testbenchPath)
         if not os.path.isdir(path):
             raise ValueError(f"The {testbenchPath} directory does not exist")
         self.testbenchPath = path
-        
+
     def saveTestbenchOutput(self, testbenchOutputPath):
         path = os.path.abspath(testbenchOutputPath)
         if not os.path.isdir(path):
             raise ValueError(f"The {testbenchOutputPath} directory does not exist")
         self.testbenchOutputPath = path
-    
+
     def saveTestbenchConfig(self, testbenchConfigPath):
         path = os.path.abspath(testbenchConfigPath)
         if not os.path.isfile(path):
             raise ValueError(f"The {testbenchConfigPath} file does not exist")
         self.testbenchConfigPath = path
-    
+
     def createTestbench(self):
         """_summary_
         Creates a testbench folder for the project
@@ -208,8 +213,8 @@ class SpdstrWorkspace(object):
             raise FileExistsError("A testbench directory already exists")
         except Exception as e:
             raise e
-        self.saveTestbenchDir( path )
-    
+        self.saveTestbenchDir(path)
+
     def createTestbenchCfgFile(self):
         """_summary_
         Creates a testbench configuration file
@@ -220,13 +225,13 @@ class SpdstrWorkspace(object):
         if "cfg.toml" in os.listdir(self.testbenchPath):
             raise FileExistsError("A testbench configuration file already exists")
         filepath = os.path.join(self.testbenchPath, "cfg.toml")
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             f.write("[speedster.testbench]\n")
-            f.write("workspace = \"{}\"\n".format(self.name))
-            f.write("description = \"Testbench configuration file for extraction\"\n")
-            f.write("testbench = \"{}\"\n".format(self.testbenchPath))
-            f.write("output = \"{}\"\n".format(self.testbenchOutputPath))
-        self.saveTestbenchConfig( filepath )
+            f.write('workspace = "{}"\n'.format(self.name))
+            f.write('description = "Testbench configuration file for extraction"\n')
+            f.write('testbench = "{}"\n'.format(self.testbenchPath))
+            f.write('output = "{}"\n'.format(self.testbenchOutputPath))
+        self.saveTestbenchConfig(filepath)
 
     # TODO : def parseTestbenchConfig(self, **kwargs):
     # Create the parser for the automatic configuration of the testbench config file
@@ -255,8 +260,9 @@ class SpdstrWorkspace(object):
             os.mkdir(path)
         except FileExistsError:
             raise FileExistsError("A testbench output directory already exists")
-        self.saveTestbenchOutput( path )
-    
+        self.saveTestbenchOutput(path)
+
+
 class SpdstrWorkspaceLib(object):
     """_summary_
     A workspace library is a dictionary of workspace name : paths
@@ -271,32 +277,29 @@ class SpdstrWorkspaceLib(object):
     Returns:
         _type_: _description_
     """
+
     __slots__ = [
         "libPath",
         "libFileName",
-        "lib", 
+        "lib",
     ]
-    
-    def __init__(   
-            self, 
-            libPath: str = "",
-            fileName: str = "",
-            lib: dict = None
-        ):
+
+    def __init__(self, libPath: str = "", fileName: str = "", lib: dict = None):
         if not os.path.isdir(libPath):
-            raise FileNotFoundError(f'The workspace library path "{libPath}" is not a directory')
+            raise FileNotFoundError(
+                f'The workspace library path "{libPath}" is not a directory'
+            )
 
         self.libPath = libPath
         self.libFileName = fileName
         self.lib = {}
         if lib:
             self.__parse(lib)
-    
+
     def __parse(self, lib):
         for key, value in lib.items():
             self.lib[key] = value
-    
-    
+
     def __str__(self):
         ret = "--------------------------------\n" + "Workspace Library:\n"
         ret += "--------------------------------\n"
@@ -306,7 +309,7 @@ class SpdstrWorkspaceLib(object):
             ret += "Workspace Full Path :   {}\n\n".format(value["fullpath"])
         ret += "--------------------------------\n"
         return ret
-    
+
     def __iter__(self):
         return iter(self.lib)
 
@@ -315,20 +318,25 @@ class SpdstrWorkspaceLib(object):
             raise KeyError(f'The key "{key}" does not exist')
         return self.lib[key]
 
-    def add(self, workspace: SpdstrWorkspace, overWrite = False) -> None:
+    def add(self, workspace: SpdstrWorkspace, overWrite=False) -> None:
         if not overWrite and workspace.name in self.lib.keys():
             raise KeyError(f'The workspace name "{workspace.name}" already exists')
         fullpath = os.path.join(workspace.workspacePath, f"{workspace.name}.json")
-        self.lib[workspace.name] = {"parent":workspace.workspacePath,"fullpath": fullpath}
-        
+        self.lib[workspace.name] = {
+            "parent": workspace.workspacePath,
+            "fullpath": fullpath,
+        }
+
     def remove(self, workspaceName: str) -> None:
         if workspaceName not in self.lib.keys():
             raise KeyError(f'The workspace name "{workspaceName}" does not exist')
         del self.lib[workspaceName]
-    
+
     def defineWorkspaceLibPath(self, workspaceLibPath: str) -> None:
         if not os.path.isdir(workspaceLibPath):
-            raise FileNotFoundError(f'The workspace library path "{workspaceLibPath}" is not a directory')
+            raise FileNotFoundError(
+                f'The workspace library path "{workspaceLibPath}" is not a directory'
+            )
 
         self.libPath = workspaceLibPath
 
@@ -337,4 +345,3 @@ class SpdstrWorkspaceLib(object):
 
     def clearWorkspaceLib(self) -> None:
         self.lib.clear()
-        

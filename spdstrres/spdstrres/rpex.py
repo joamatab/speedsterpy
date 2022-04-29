@@ -11,6 +11,7 @@ the user with the resistance extraction engine
 
 from loguru import logger
 import sys
+
 sys.path.append("../spdstrutil")
 from spdstrutil import (
     Unimplemented,
@@ -18,14 +19,15 @@ from spdstrutil import (
 from spdstrlib import (
     SpdstrWorkspace,
 )
+
+
 def runResPex(
     workspace: SpdstrWorkspace,
-    ptp = False,
-    vis = False,
-    out = False,
-    bench = False,
-    netlistName = "",
-    spefName = "",
+    ptp=False,
+    vis=False,
+    out=False,
+    bench=False,
+    netlistName="",
+    spefName="",
 ) -> Unimplemented:
     return Unimplemented("spdstrres/rpex/runResPex")
-

@@ -5,16 +5,18 @@ from spdstrlib import (
     __workspace_lib_path__,
     SpdstrWorkspaceLib,
     SpdstrWorkspace,
-    read, 
-    write, 
-    dump, 
+    read,
+    write,
+    dump,
     load,
     __version__,
-    getParent, 
+    getParent,
 )
 
+
 def test_version():
-    assert __version__ == '0.1.0'
+    assert __version__ == "0.1.0"
+
 
 def test_workspace_lib_creation():
     lib = SpdstrWorkspaceLib(
@@ -24,18 +26,19 @@ def test_workspace_lib_creation():
     assert type(lib) == SpdstrWorkspaceLib
     assert lib.libPath == __workspace_lib_path__
     assert lib.libFileName == __workspace_filename__
-    #save workspace library
+    # save workspace library
     dump(lib)
+
 
 def test_workspace_creation():
     """_summary_
     Test the creation of a workspace
-    """ 
-    #load library from standard path:
+    """
+    # load library from standard path:
     path = os.path.join(__workspace_lib_path__, __workspace_filename__)
     lib = load(path)
 
-    #parent = os.path.dirname(os.path.abspath(__file__))
+    # parent = os.path.dirname(os.path.abspath(__file__))
     file = os.path.abspath(__file__)
     parent = getParent(file, 1)
     logger.info("\nParent directory:{}".format(parent))
@@ -48,11 +51,20 @@ def test_workspace_creation():
     print(newWorkspace)
     assert type(newWorkspace) == SpdstrWorkspace
     assert newWorkspace.name == "test_project"
-    assert newWorkspace.workspacePath == "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrlib/resources/temp"
-    assert newWorkspace.techPath == "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrlib/resources/temp/test.tlef"
-    assert newWorkspace.layoutPath == "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrlib/resources/temp/test.gds"
+    assert (
+        newWorkspace.workspacePath
+        == "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrlib/resources/temp"
+    )
+    assert (
+        newWorkspace.techPath
+        == "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrlib/resources/temp/test.tlef"
+    )
+    assert (
+        newWorkspace.layoutPath
+        == "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrlib/resources/temp/test.gds"
+    )
     logger.info("Success creating a new project:\n{}".format(str(newWorkspace)))
-    #create a testbench directory
+    # create a testbench directory
     newWorkspace.createTestbench()
     # create a testbench output child directory
     newWorkspace.createTestbenchOutputDir()
@@ -63,7 +75,8 @@ def test_workspace_creation():
 
     # save the workspace library
     dump(lib)
-    
+
+
 def test_workspace_write():
     """_summary_
     Test the writing of a workspace to json file
@@ -72,7 +85,7 @@ def test_workspace_write():
     path = os.path.join(__workspace_lib_path__, __workspace_filename__)
     lib = load(path)
 
-    #parent = os.path.dirname(os.path.abspath(__file__))
+    # parent = os.path.dirname(os.path.abspath(__file__))
     file = os.path.abspath(__file__)
     parent = getParent(file, 1)
     logger.info("\nParent directory:{}".format(parent))
@@ -91,7 +104,7 @@ def test_workspace_write():
 
     # save the workspace library
     dump(lib)
-    
+
 
 def test_workspace_read():
     """_summary_
@@ -103,6 +116,3 @@ def test_workspace_read():
     wspath = lib["test_project_v2"]["fullpath"]
     newWorkspace2 = read(wspath)
     logger.info("\n{}".format(str(newWorkspace2)))
-    
-
-    

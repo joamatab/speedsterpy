@@ -10,6 +10,8 @@ extraction method leveraged by image processing
 from enum import Enum
 import numpy as np
 from spdstrutil import Unimplemented
+
+
 class SpeedsterPortType(Enum):
     """_summary_
     SpeedsterPointType enum
@@ -19,6 +21,7 @@ class SpeedsterPortType(Enum):
         OUTPUT : output point
         IO: input and output point
     """
+
     None
     INPUT = 1
     OUTPUT = 2
@@ -35,12 +38,13 @@ class SpeedsterPort(object):
         "location",
         "width",
     ]
+
     def __init__(
-        self, 
+        self,
         name: str = "new_port",
         ioType: SpeedsterPortType = None,
         resistance: float = 0.0,
-        location: list = [0,0],
+        location: list = [0, 0],
         width: float = 1.0,
         layer: str = "met1",
         dataType: str = "pin",
@@ -54,9 +58,10 @@ class SpeedsterPort(object):
         self.width = width
         self.x = location[0]
         self.y = location[1]
-        
+
     def __str__(self):
         return f"Port: {self.name} Type: {self.ioType.name} Location: {self.location} in {self.layer} Resistance: {self.resistance}"
+
     def __dict__(self) -> dict:
         return {
             "name": self.name,
@@ -67,49 +72,52 @@ class SpeedsterPort(object):
             "layer": self.layer,
             "datatype": self.datatype,
         }
+
     def parseData(self, yamlDict: dict):
         """_summary_
         Parses the data of a port
         Args:
             yamlDict (dict): a dictionary containing the port data, resulting from a yaml file
-            
+
         """
         if "name" not in yamlDict:
             raise KeyError("Port must have a name")
-        self.name = yamlDict['name']
+        self.name = yamlDict["name"]
         if "ioType" not in yamlDict:
             raise KeyError("Port must have an I/O Type")
-        self.ioType = SpeedsterPortType[yamlDict['ioType']]
+        self.ioType = SpeedsterPortType[yamlDict["ioType"]]
         if "resistance" not in yamlDict:
             raise KeyError("Port must have a resistance")
-        self.resistance = yamlDict['resistance']
+        self.resistance = yamlDict["resistance"]
         if "location" not in yamlDict:
             raise KeyError("Port must have a location")
-        self.location = yamlDict['location']
+        self.location = yamlDict["location"]
         if "width" not in yamlDict:
             raise KeyError("Port must have a width")
-        self.width = yamlDict['width']
+        self.width = yamlDict["width"]
         if "layer" not in yamlDict:
             raise KeyError("Port must have a layer")
-        self.layer = yamlDict['layer']
+        self.layer = yamlDict["layer"]
         if "datatype" not in yamlDict:
             raise KeyError("Port must have a datatype")
-        self.datatype = yamlDict['datatype']
+        self.datatype = yamlDict["datatype"]
         self.x = self.location[0]
         self.y = self.location[1]
-    
+
     def get_polygon(self):
         #
         return [
-            [self.x - self.width/2, self.y - self.width/2],
-            [self.x + self.width/2, self.y - self.width/2],
-            [self.x - self.width/2, self.y + self.width/2],
-            [self.x + self.width/2, self.y + self.width/2],
+            [self.x - self.width / 2, self.y - self.width / 2],
+            [self.x + self.width / 2, self.y - self.width / 2],
+            [self.x - self.width / 2, self.y + self.width / 2],
+            [self.x + self.width / 2, self.y + self.width / 2],
         ]
-        
+
+
 class SpeedsterPortLibrary(object):
     def __init__(self):
         self.ports = {}
+
     def __str__(self):
         ret = "-----------------\n" + "Port Library\n"
         for value in self.ports.values():
@@ -117,10 +125,10 @@ class SpeedsterPortLibrary(object):
             ret += "{}\n".format(value)
         ret += "-----------------\n"
         return ret
-    
+
     def __iter__(self):
         return iter(self.ports.values())
-    
+
     def add(self, port: SpeedsterPort):
         """_summary_
         Adds a port to the library
@@ -133,7 +141,7 @@ class SpeedsterPortLibrary(object):
             raise KeyError(f"Port {port.name} already exists")
         self.ports[port.name] = port
         return self
-        
+
     def remove(self, portName):
         """_summary_
         Remnoves a port from the library
@@ -162,32 +170,31 @@ class SpeedsterPortLibrary(object):
         Parses the data of a port
         Args:
             yamlDict (dict): a dictionary containing the port data, resulting from a yaml file
-            
+
         """
         for portName, port in yamlDict.items():
             newPort = SpeedsterPort()
             newPort.parseData(port)
             self.add(newPort)
-    
-    
+
+
 class SpeedsterResMap(object):
     """_summary_
     Standard resistance map data structure
     for the Speedster tool, to map resistance values
     to each fragment of a PolygonSet
     """
-    __slots__ = [
-        "r"
-    ]
-    
-    def __init__(self, resistances = []):
+
+    __slots__ = ["r"]
+
+    def __init__(self, resistances=[]):
         if resistances != [] and type(resistances[0]) != float:
             raise TypeError("The resistances must be a list of floats")
         self.r = np.array(resistances)
-    
+
     def __dict__(self) -> dict:
         return {"r": list(self.r)}
-    
+
     def __eq__(self, other) -> bool:
         """_summary_
         Returns if the Speedster ResMap geometry data structure is equal to another
@@ -197,7 +204,7 @@ class SpeedsterResMap(object):
         if type(other) != SpeedsterResMap:
             return False
         return np.array_equal(self.r, other.r)
-    
+
     def __ne__(self, other) -> bool:
         """_summary_
         Returns if the Speedster ResMap geometry data structure is not equal to another
@@ -205,32 +212,32 @@ class SpeedsterResMap(object):
             other (object): _description_
         """
         return not self.__eq__(other)
-    
+
     def __str__(self) -> str:
         return str(self.r)
-    
+
     def __repr__(self) -> str:
         return str(self.r)
-    
+
     def __len__(self) -> int:
         return len(self.r)
-    
+
     def __getitem__(self, index: int) -> float:
         return self.r[index]
-    
+
     def __iter__(self) -> iter:
         return iter(self.r)
 
     def __setitem__(self, index: int, value: float) -> None:
         self.r[index] = value
-        
+
     def __delitem__(self, index: int) -> None:
         del self.r[index]
-    
+
     def __append__(self, value: float) -> np.array:
         self.r = np.append(self.r, value)
         return self.r
-    
+
     def parse_data(self, yamlDict: dict) -> None:
         """_summary_
         Auto-generate the Speedster ResMap data structure
@@ -240,8 +247,9 @@ class SpeedsterResMap(object):
                              data structure
         """
         if "r" not in yamlDict:
-            raise TypeError("The parsed yamlDict must contain the \"r\" key")
-        self.r = np.array( yamlDict["r"] )
+            raise TypeError('The parsed yamlDict must contain the "r" key')
+        self.r = np.array(yamlDict["r"])
+
 
 # TODO : Develop a SpeedsterLayoutResistanceMap to save the
 # resistance map of a GdsCell representing a net
@@ -254,13 +262,11 @@ class SpeedsterResMap(object):
 # to save the generated graphs for current path in the layout
 
 
-
-
 # TODO : Develop a SpeedsterInterLayerChargeMobilityGraph
-# to save the generated graphs for the mobility 
+# to save the generated graphs for the mobility
 # of charge between successive metal layers of the
 # integrated circuit
-        
-# TODO : develop an extraction engine, that 
+
+# TODO : develop an extraction engine, that
 # controls the extraction flux
 # and provides textual results to console

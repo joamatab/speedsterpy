@@ -1,11 +1,11 @@
-__version__ = '0.1.0'
+__version__ = "0.1.0"
 __name__ = "spdstrutil"
 __description__ = "Speedster utilities package."
 __date__ = "2022-04-19"
 __author__ = "Diogo André Silvares Dias"
 __annotations__ = ""
 
-from .data import(
+from .data import (
     Unimplemented,
     GdsLayerPurpose,
     GdsTable,
@@ -17,6 +17,7 @@ from .write import (
     writeGdsTable,
 )
 from .util import *
+
 
 def verboseInfo():
     print(f"Version      : {__version__} ({__date__})")
