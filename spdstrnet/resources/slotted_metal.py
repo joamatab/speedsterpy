@@ -1,6 +1,7 @@
 """_summary_
 Build a slotted metal shape cell
 """
+
 import os
 import gdspy
 import numpy as np
@@ -18,9 +19,10 @@ metal = {
     "via2": {"layer": 69, "datatype": 44, 'width' : 0.200, 'min_space' : 0.200},
     "met3": {"layer": 70, "datatype": 20, 'width' : 0.200, 'min_space' : 0.200},
 }
-lds = {}
-for key, val in metal.items():
-    lds[key] = { "layer": val["layer"], "datatype": val["datatype"] }
+lds = {
+    key: {"layer": val["layer"], "datatype": val["datatype"]}
+    for key, val in metal.items()
+}
 
 circuit_w = 1.21 # 10 micrometers of width
 circuit_l = 3.0 # 10 micrometers of  length
@@ -37,7 +39,7 @@ for y in np.arange(0.0, circuit_w, metal["met2"]['min_space']):
     if yplace:
         polys.append( gdspy.Rectangle((xi, y), (xf, y + metal["met2"]['width']), **lds["met2"]) )
     yplace = not(yplace)
-    
+
 # ? build vertical metal 2 geometries
 # initial y
 yi = 0.0
@@ -45,16 +47,16 @@ yi = 0.0
 yf = circuit_w + 0.200
 xplace = True
 column_width = 0.5
-for x in np.arange(0.0, circuit_l+column_width+0.1, column_width):
+for x in np.arange(0.0, xf + column_width + 0.1, column_width):
     if xplace:
         polys.append(gdspy.Rectangle((x,yi), (x + column_width, yf), **lds["met2"]))
     xplace = not(xplace)
-    
+
 for p in polys:
     cell.add(p)
 
 dirpath = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrnet/resources/data"
-path_gds = os.path.join(dirpath, '{}.gds'.format(cell.name))
+path_gds = os.path.join(dirpath, f'{cell.name}.gds')
 #path_oas = os.path.join(dirpath, '{}.oas'.format(cell.name))
 lib.write_gds(path_gds)
 #cell.to_gds(cell.name+'.gds')

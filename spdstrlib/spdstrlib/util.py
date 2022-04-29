@@ -16,7 +16,7 @@ def getParent(path, levels = 1):
         levels  (int)   : number of levels to go up in the tree
     """
     common = path
-    for i in range(levels+1):
+    for _ in range(levels+1):
         common = os.path.dirname(os.path.abspath(common))
     return common
 
@@ -84,22 +84,11 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     layoutFilePath = argv.gds[0]
     if not argv.lef:
         raise ValueError("No .lef ports and pins file was provided")
+    netlistFilePath = argv.nl[0] if argv.net else None
+    testbenchDir = argv.tb[0] if argv.tb else None
+    outputDir = argv.o[0] if argv.o else None
+    tableFilePath = argv.tab[0] if argv.tab else None
     lefFilePath = argv.lef[0]
-    
-    #optional values to be parsed from console
-    netlistFilePath = None
-    testbenchDir    = None
-    outputDir       = None
-    tableFilePath   = None
-    if argv.net:
-        netlistFilePath = argv.nl[0]
-    if argv.tb:
-        testbenchDir = argv.tb[0]
-    if argv.o:
-        outputDir = argv.o[0]
-    if argv.tab:
-        tableFilePath = argv.tab[0]
-        
     # after collecting all the values, create the workspace
     args = {
         "name"                  : workspaceName,
@@ -111,7 +100,7 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
     newWorkspace = SpdstrWorkspace(selfDict=args)
     if netlistFilePath:
         newWorkspace.saveNetlistFile(netlistFilePath)
-        
+
     if testbenchDir:
         newWorkspace.saveTestbenchDir(testbenchDir)
     else:
@@ -122,15 +111,15 @@ def handleCreation(argv: Namespace, lib: SpdstrWorkspaceLib) -> None:
         newWorkspace.saveTestbenchOutput(outputDir)
     else: # if no output directory was provided,
         newWorkspace.createTestbenchOutputDir() # create a default testbench output directory
-    
+
     if tableFilePath:
         newWorkspace.saveGdsTableFile(tableFilePath)
-    
+
     # write new workspace to memory
     write(newWorkspace)
     # save new workspace to library
     lib.add(newWorkspace, overWrite=True)
-    logger.info("Workspace \"{}\" created successfully".format(workspaceName))
+    logger.info(f'Workspace "{workspaceName}" created successfully')
     return newWorkspace
 
 def handleDeletion(argv: Namespace, lib: SpdstrWorkspaceLib) -> SpdstrWorkspace:
@@ -150,7 +139,7 @@ def handleDeletion(argv: Namespace, lib: SpdstrWorkspaceLib) -> SpdstrWorkspace:
     # erase the workspace from the library
     lib.remove(workspaceName)
     #return the deleted workspace
-    logger.info("Workspace \"{}\" deleted successfully".format(workspaceName))
+    logger.info(f'Workspace "{workspaceName}" deleted successfully')
     return workspace
 
 def handleShow(argv: Namespace, lib : SpdstrWorkspaceLib) -> None:

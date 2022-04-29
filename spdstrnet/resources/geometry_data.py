@@ -2,6 +2,7 @@
 This script generates the data for performing the tests
 of the spdstrnet module
 """
+
 import gdspy
 import os
 
@@ -15,9 +16,7 @@ ld = {
     "met1": {"layer":1, "datatype": 0},
     "met2": {"layer":2, "datatype": 0}
 }
-polys = []
-polys.append( gdspy.Rectangle((0.0,0.0),(3.0,1.0), **ld["met1"]) ) 
-
+polys = [gdspy.Rectangle((0.0,0.0), (3.0,1.0), **ld["met1"])]
 polys.append( gdspy.Rectangle( (2.0,0.0), (3.0, 3.0), **ld["met2"]) )
 
 polys.append( gdspy.Rectangle( (2.0,0.0), (3.0, 3.0), **ld["met1"]) )
