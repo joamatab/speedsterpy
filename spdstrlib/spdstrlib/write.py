@@ -32,14 +32,14 @@ def write(project: SpdstrWorkspace):
     """
     workspaceName = project.name
     workspacePath = project.workspacePath
-    logger.info("Saving workspace \"{}\"".format(workspaceName))
+    logger.info(f'Saving workspace "{workspaceName}"')
     if workspacePath == "":
         raise ValueError("No workspace parent directory path was specified")
-    
+
     if not os.path.exists(workspacePath):
-        raise FileNotFoundError("The workspace path \"{}\" does not exist".format(workspacePath))
+        raise FileNotFoundError(f'The workspace path "{workspacePath}" does not exist')
     # write the workspace
-    filepath = os.path.join(workspacePath, "{}.json".format(workspaceName))
+    filepath = os.path.join(workspacePath, f"{workspaceName}.json")
     with open(filepath, "w") as f:
         json.dump(project.__dict__(), f)
-    logger.info("Success saving workspace \"{}\"".format(workspaceName))
+    logger.info(f'Success saving workspace "{workspaceName}"')

@@ -157,7 +157,7 @@ class TestUtil(unittest.TestCase):
         def wait_ms(msec: float) -> str:
             import time
             time.sleep(msec*1e-3)
-            return "Waited {} milli seconds".format(msec)
+            return f"Waited {msec} milli seconds"
         self.assertEqual(wait_ms(10), "Waited 10 milli seconds")
         
 if __name__ == '__main__':

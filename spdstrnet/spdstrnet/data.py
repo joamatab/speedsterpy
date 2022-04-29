@@ -56,13 +56,7 @@ class SpeedsterPort(object):
         self.y = location[1]
         
     def __str__(self):
-        return "Port: {} Type: {} Location: {} in {} Resistance: {}".format(
-            self.name,
-            self.ioType.name,
-            self.location,
-            self.layer,
-            self.resistance,
-        )
+        return f"Port: {self.name} Type: {self.ioType.name} Location: {self.location} in {self.layer} Resistance: {self.resistance}"
     def __dict__(self) -> dict:
         return {
             "name": self.name,
@@ -80,25 +74,25 @@ class SpeedsterPort(object):
             yamlDict (dict): a dictionary containing the port data, resulting from a yaml file
             
         """
-        if not "name" in yamlDict.keys():
+        if "name" not in yamlDict:
             raise KeyError("Port must have a name")
         self.name = yamlDict['name']
-        if not "ioType" in yamlDict.keys():
+        if "ioType" not in yamlDict:
             raise KeyError("Port must have an I/O Type")
         self.ioType = SpeedsterPortType[yamlDict['ioType']]
-        if not "resistance" in yamlDict.keys():
+        if "resistance" not in yamlDict:
             raise KeyError("Port must have a resistance")
         self.resistance = yamlDict['resistance']
-        if not "location" in yamlDict.keys():
+        if "location" not in yamlDict:
             raise KeyError("Port must have a location")
         self.location = yamlDict['location']
-        if not "width" in yamlDict.keys():
+        if "width" not in yamlDict:
             raise KeyError("Port must have a width")
         self.width = yamlDict['width']
-        if not "layer" in yamlDict.keys():
+        if "layer" not in yamlDict:
             raise KeyError("Port must have a layer")
         self.layer = yamlDict['layer']
-        if not "datatype" in yamlDict.keys():
+        if "datatype" not in yamlDict:
             raise KeyError("Port must have a datatype")
         self.datatype = yamlDict['datatype']
         self.x = self.location[0]
@@ -117,8 +111,7 @@ class SpeedsterPortLibrary(object):
     def __init__(self):
         self.ports = {}
     def __str__(self):
-        ret = "-----------------\n"
-        ret += "Port Library\n"
+        ret = "-----------------\n" + "Port Library\n"
         for value in self.ports.values():
             ret += "-----------------\n"
             ret += "{}\n".format(value)
@@ -137,7 +130,7 @@ class SpeedsterPortLibrary(object):
             SpeedsterPortLibrary: the library with the new port
         """
         if port.name in self.ports.keys():
-            raise KeyError("Port {} already exists".format(port.name))
+            raise KeyError(f"Port {port.name} already exists")
         self.ports[port.name] = port
         return self
         
@@ -152,7 +145,7 @@ class SpeedsterPortLibrary(object):
             KeyError: _description_
         """
         if portName not in self.ports.keys():
-            raise KeyError("Port {} does not exist".format(portName))
+            raise KeyError(f"Port {portName} does not exist")
         del self.ports[portName]
         return self
 
@@ -162,10 +155,7 @@ class SpeedsterPortLibrary(object):
         Returns:
             dict: _description_
         """
-        ret = {}
-        for key, value in self.ports.items():
-            ret[key] = value.__dict__()
-        return ret
+        return {key: value.__dict__() for key, value in self.ports.items()}
 
     def parseData(self, yamlDict: dict):
         """_summary_
@@ -191,9 +181,8 @@ class SpeedsterResMap(object):
     ]
     
     def __init__(self, resistances = []):
-        if resistances != []:
-            if type(resistances[0]) != float:
-                raise TypeError("The resistances must be a list of floats")
+        if resistances != [] and type(resistances[0]) != float:
+            raise TypeError("The resistances must be a list of floats")
         self.r = np.array(resistances)
     
     def __dict__(self) -> dict:
@@ -250,7 +239,7 @@ class SpeedsterResMap(object):
             yamlDict (dict): a dictionary containing the Speedster ResMap
                              data structure
         """
-        if not "r" in yamlDict:
+        if "r" not in yamlDict:
             raise TypeError("The parsed yamlDict must contain the \"r\" key")
         self.r = np.array( yamlDict["r"] )
 
