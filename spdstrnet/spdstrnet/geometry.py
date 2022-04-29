@@ -203,7 +203,7 @@ def bool_polygon_overlap_check(
         bool:   returns wether the two polygons overlap or not
                 True: They overlap; False: They don't overlap
     """
-    return not ( check_polygon_overlap(polygonA, polygonB) is None )
+    return check_polygon_overlap(polygonA, polygonB) is not None
 
 def check_neighbour_polygons(
     polyA,
@@ -218,9 +218,8 @@ def check_neighbour_polygons(
         bool:   returns wether the two polygons have common edges
                 True: They have common edges; False: They don't have common edges
     """
-    if polyA.layer == polyB.layer and polyA.datatype == polyB.datatype:
-        if get_common_edges(polyA,polyB) is not None:
-            return True if not bool_polygon_overlap_check(polyA,polyB) else False
+    if polyA.layer == polyB.layer and polyA.datatype == polyB.datatype and get_common_edges(polyA, polyB) is not None:
+        return not bool_polygon_overlap_check(polyA,polyB)
     return False
 
 
@@ -415,25 +414,18 @@ def get_direction_between_rects(
     # get the 8-side direction between the two rectangles
     direction = check_neighbour_direction(poly, neighbour)
     # check which side (horizontal or vertical) is the bigger
-    verd = np.max([y for y in poly[:,1]]) - np.min([y for y in poly[:,1]])
-    hord = np.max([x for x in poly[:,0]]) - np.min([x for x in poly[:,0]])
+    verd = np.max(list(poly[:,1])) - np.min(list(poly[:,1]))
+    hord = np.max(list(poly[:,0])) - np.min(list(poly[:,0]))
     retDir = direction
     if verd > hord:
-        # if the vertical side is bigger,
-        if direction in [PolygonDirection.NORTH_EAST, PolygonDirection.NORTH_WEST]:
+        if retDir in [PolygonDirection.NORTH_EAST, PolygonDirection.NORTH_WEST]:
             retDir = PolygonDirection.NORTH
-        elif direction in [PolygonDirection.SOUTH_EAST, PolygonDirection.SOUTH_WEST]:
+        elif retDir in [PolygonDirection.SOUTH_EAST, PolygonDirection.SOUTH_WEST]:
             retDir = PolygonDirection.SOUTH
-        else:
-            pass # proceed
-    else:
-        # if the horizontal side is bigger,
-        if direction in [PolygonDirection.NORTH_EAST, PolygonDirection.SOUTH_EAST]:
-            retDir = PolygonDirection.EAST
-        elif direction in [PolygonDirection.SOUTH_WEST, PolygonDirection.NORTH_WEST]:
-            retDir = PolygonDirection.WEST
-        else:
-            pass # proceed
+    elif retDir in [PolygonDirection.NORTH_EAST, PolygonDirection.SOUTH_EAST]:
+        retDir = PolygonDirection.EAST
+    elif retDir in [PolygonDirection.SOUTH_WEST, PolygonDirection.NORTH_WEST]:
+        retDir = PolygonDirection.WEST
     return retDir
 
 
@@ -486,11 +478,7 @@ def get_polygons_by_spec(
     layer,
     datatype,
 ) -> list:
-    polys = []
-    for poly in itertools.chain(cell.get_polygonsets(), cell.get_paths()):
-        if poly.layers[0] == layer and poly.datatypes[0] == datatype:
-            polys.append(poly)
-    return polys
+    return [poly for poly in itertools.chain(cell.get_polygonsets(), cell.get_paths()) if poly.layers[0] == layer and poly.datatypes[0] == datatype]
 
 def get_polygon_dict(
     cell: Cell,
@@ -505,14 +493,14 @@ def get_polygon_dict(
         dict: dictionary of {(layer,datatype): [polygons]}
     """
     ret = {}
-    if len(specs) == 0:
+    if not specs:
         return ret
     if type(specs[0]) != tuple or type(specs[0]) != list and len(specs[0]) != 2:
         raise TypeError("The specifications must be a list of tuples or lists of length 2!")
     for spec in specs:
         layer = spec[0]
         datatype = spec[1]
-        if (layer, datatype) in ret.keys():
+        if (layer, datatype) in ret:
             raise ValueError("The specifications must be unique!")
         ret[(layer, datatype)] = get_polygons_by_spec(cell, layer, datatype)
     return ret
@@ -531,14 +519,11 @@ def check_polygon_in_cell(
         bool: _description_
     """
     # check if the received polygons are valid
-    if type(polygon) != Polygon and type(polygon) != Polygon and type(polygon) != rectangle and type(polygon) != RobustPath:
+    if type(polygon) not in [Polygon, rectangle, RobustPath]:
         raise TypeError("polyA must be a Polygon, Polygon, rectangle or RobustPath object!")
     layer = polygon.layers[0]
     datatype = polygon.datatypes[0]
-    for other in get_polygons_by_spec(cell, layer, datatype):
-        if check_same_polygon(polygon, other):
-            return True
-    return False
+    return any(check_same_polygon(polygon, other) for other in get_polygons_by_spec(cell, layer, datatype))
 
 def check_via_connection(
     polyA,
@@ -561,11 +546,11 @@ def check_via_connection(
         # ! result will not mean anything
     """
     # check if the received polygons are valid
-    if type(polyA) != Polygon and type(polyA) != Polygon and type(polyA) != rectangle and type(polyA) != RobustPath:
+    if type(polyA) not in [Polygon, rectangle, RobustPath]:
         raise TypeError("polyA must be a Polygon, Polygon, rectangle or RobustPath object!")
-    if type(polyB) != Polygon and type(polyB) != Polygon and type(polyB) != rectangle and type(polyB) != RobustPath:
+    if type(polyB) not in [Polygon, rectangle, RobustPath]:
         raise TypeError("polyB must be a Polygon, Polygon, rectangle or RobustPath object!")
-    if type(via) != Polygon and type(via) != Polygon and type(via) != rectangle and type(via) != RobustPath:
+    if type(via) not in [Polygon, rectangle, RobustPath]:
         raise TypeError("via must be a Polygon, Polygon, rectangle or RobustPath object!")
     # check if the polygons are the same in pairs
     if check_same_polygon(polyA, polyB):
@@ -574,7 +559,7 @@ def check_via_connection(
         return False
     if check_same_polygon(polyB, via):
         return False
-    
+
     # check if the layers are not the same
     if polyA.layers[0] == polyB.layers[0]:
         return False
@@ -600,7 +585,7 @@ def join_overlapping_polygons_cell(
     Returns:
         Cell: the new gdspy.Cell object with the joined polygons
     """
-    newCell = Cell(cell.name+"_joined", exclude_from_current = True)
+    newCell = Cell(f"{cell.name}_joined", exclude_from_current = True)
     polygons = cell.get_polygons(by_spec = list(layerMap.values()))
     for layer, datatype in polygons.keys():
         poly = boolean( polygons[(layer, datatype)], polygons[(layer, datatype)], 'or', layer = layer, datatype = datatype )

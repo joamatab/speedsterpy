@@ -34,18 +34,18 @@ def test_workspace_creation():
     #load library from standard path:
     path = os.path.join(__workspace_lib_path__, __workspace_filename__)
     lib = load(path)
-    
+
     #parent = os.path.dirname(os.path.abspath(__file__))
     file = os.path.abspath(__file__)
     parent = getParent(file, 1)
     logger.info("\nParent directory:{}".format(parent))
     newWorkspace = SpdstrWorkspace("test_project")
-    projectDir = "{}/resources/temp".format(parent)
+    projectDir = f"{parent}/resources/temp"
     newWorkspace.saveWorkspaceDir(projectDir)
-    newWorkspace.saveTechFile("{}/test.tlef".format(projectDir))
-    newWorkspace.saveLayoutFile("{}/test.gds".format(projectDir))
+    newWorkspace.saveTechFile(f"{projectDir}/test.tlef")
+    newWorkspace.saveLayoutFile(f"{projectDir}/test.gds")
     lib.add(newWorkspace)
-    print(str(newWorkspace))
+    print(newWorkspace)
     assert type(newWorkspace) == SpdstrWorkspace
     assert newWorkspace.name == "test_project"
     assert newWorkspace.workspacePath == "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrlib/resources/temp"
@@ -58,9 +58,9 @@ def test_workspace_creation():
     newWorkspace.createTestbenchOutputDir()
     # create a testbench configuration .toml file
     newWorkspace.createTestbenchCfgFile()
-    
-    print(str(newWorkspace))
-    
+
+    print(newWorkspace)
+
     # save the workspace library
     dump(lib)
     
@@ -71,24 +71,24 @@ def test_workspace_write():
     # load the workspace library
     path = os.path.join(__workspace_lib_path__, __workspace_filename__)
     lib = load(path)
-    
+
     #parent = os.path.dirname(os.path.abspath(__file__))
     file = os.path.abspath(__file__)
     parent = getParent(file, 1)
     logger.info("\nParent directory:{}".format(parent))
     newWorkspace = SpdstrWorkspace("test_project_v2")
-    projectDir = "{}/resources/temp2".format(parent)
+    projectDir = f"{parent}/resources/temp2"
     newWorkspace.saveWorkspaceDir(projectDir)
-    newWorkspace.saveTechFile("{}/test2.tlef".format(projectDir))
-    newWorkspace.saveLayoutFile("{}/test2.gds".format(projectDir))
+    newWorkspace.saveTechFile(f"{projectDir}/test2.tlef")
+    newWorkspace.saveLayoutFile(f"{projectDir}/test2.gds")
     lib.add(newWorkspace)
     write(newWorkspace)
     print("Updated library:")
     try:
-        print(str(lib))
+        print(lib)
     except Exception as e:
         pass
-    
+
     # save the workspace library
     dump(lib)
     

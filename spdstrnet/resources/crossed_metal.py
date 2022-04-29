@@ -4,6 +4,7 @@ with interconnected metal shapes
 to proceed to the testing of the features
 of the spdstrnet package.
 """
+
 import os
 import gdspy
 import numpy as np
@@ -21,9 +22,7 @@ metal = {
     "via2": {"layer": 69, "datatype": 44, 'width' : 0.200, 'min_space' : 0.200},
     "met3": {"layer": 70, "datatype": 20, 'width' : 0.200, 'min_space' : 0.200},
 }
-lds = {}
-for key, val in metal.items():
-    lds[key] = { "layer": val["layer"], "datatype": val["datatype"] }
+lds = {key: {"layer": val["layer"], "datatype": val["datatype"]} for key, val in metal.items()}
 
 circuit_w = 10.0 # 10 micrometers of width
 circuit_l = 10.0 # 10 micrometers of  length
@@ -47,7 +46,7 @@ place_via = True
 for y in np.arange(0.0, circuit_w, metal["met1"]['min_space']):
     if yplace:
         xplace = True
-        for x in np.arange(0.0, circuit_l, metal["via"]['min_space']):
+        for x in np.arange(0.0, xf, metal["via"]['min_space']):
             if xplace:
                 if place_via:
                     polys.append( gdspy.Rectangle((x, y), (x + metal["via"]['width'] , y + metal["via"]['width']), **lds["via"]) )
@@ -62,7 +61,7 @@ yi = 0.0
 yf = circuit_w + 0.100
 #placing semaphore
 xplace = True
-for x in np.arange(0.0, circuit_l, metal["met2"]['min_space']):
+for x in np.arange(0.0, xf, metal["met2"]['min_space']):
     if xplace:
         polys.append( gdspy.Rectangle((x, yi), (x + metal["met2"]['width'], yf), **lds["met2"]) )
     xplace = not(xplace)
@@ -93,8 +92,8 @@ for p in polys:
     cell.add(p)
 
 dirpath = "/Users/dasdias/Documents/SoftwareProjects/speedsterpy/spdstrnet/resources/data"
-path_gds = os.path.join(dirpath, '{}.gds'.format(cell.name))
-path_oas = os.path.join(dirpath, '{}.oas'.format(cell.name))
+path_gds = os.path.join(dirpath, f'{cell.name}.gds')
+path_oas = os.path.join(dirpath, f'{cell.name}.oas')
 lib.write_gds(path_gds)
 #cell.to_gds(cell.name+'.gds')
 gdspy.LayoutViewer(lib)

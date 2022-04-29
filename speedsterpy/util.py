@@ -16,8 +16,8 @@ def platformInfo() -> None:
     """_summary_
     Prints platform info to console
     """
-    ret =  "Python      : {}\n".format(str(sys.version.split('\n')))
-    ret += "System      : {}\n".format(str(platform.system()))
+    ret = "Python      : {}\n".format(str(sys.version.split('\n'))) + "System      : {}\n".format(str(platform.system()))
+
     ret += "Machine     : {}\n".format(str(platform.machine()))
     ret += "Platform    : {}\n".format(str(platform.platform()))
     ret += "Version     : {}\n".format(str(platform.version()))
@@ -28,8 +28,8 @@ def appInfo() -> None:
     """_summary_
     Prints app info to console
     """
-    ret =  "Speedster, Version {} ({})\n".format(__version__, __date__)
-    ret += "Author      : {}\n".format(__author__)
+    ret = "Speedster, Version {} ({})\n".format(__version__, __date__) + "Author      : {}\n".format(__author__)
+
     ret += "Email       : {}\n".format(__email__)
     ret += "Annotations : {}\n".format(__annotations__)
     #return ret
@@ -64,10 +64,8 @@ def setupArgParser(
     Returns:
         argparse.ArgumentParser: _description_
     """
-    parser = argparse.ArgumentParser(
-        description="{}".format(__description__),
-        exit_on_error= False, # to catch and surpress errors
-    )
+    parser = argparse.ArgumentParser(description=f"{__description__}", exit_on_error=False)
+
     # mutually exclusive arguments
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -98,7 +96,7 @@ def setupArgParser(
         const = platformInfo,
         dest = 'cmd'
     )
-    
+
     # setup subparsers
     subparsers = parser.add_subparsers()
     for cmd, extCmd, hel in subSysTokens:
@@ -128,6 +126,6 @@ def setupArgParser(
                     )
             # add info option
             subparser.add_argument("-i", "--info", action="store_true", help="show tool info")
-                
+
     return parser
 
